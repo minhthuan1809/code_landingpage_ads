@@ -83,6 +83,90 @@ function toast(msg) {
   setTimeout(() => el.remove(), 2500);
 }
 
+let globalLoaderCount = 0;
+
+function ensureGlobalLoader() {
+  let el = $("#globalLoader");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "globalLoader";
+    el.className = "global-loader";
+    el.innerHTML =
+      '<div class="global-loader-card"><span class="btn-spinner global-loader-spinner" aria-hidden="true"></span><p class="global-loader-text">Đang tải...</p></div>';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function showGlobalLoader(message = "Đang tải...") {
+  globalLoaderCount += 1;
+  const el = ensureGlobalLoader();
+  const text = el.querySelector(".global-loader-text");
+  if (text) text.textContent = message;
+  el.classList.add("is-visible");
+}
+
+function hideGlobalLoader() {
+  globalLoaderCount = Math.max(0, globalLoaderCount - 1);
+  if (globalLoaderCount === 0) {
+    $("#globalLoader")?.classList.remove("is-visible");
+  }
+}
+
+async function runWithGlobalLoader(task, message = "Đang tải...") {
+  showGlobalLoader(message);
+  try {
+    return await task();
+  } finally {
+    hideGlobalLoader();
+  }
+}
+
+function sectionLoaderHtml(message = "Đang tải...") {
+  return `<div class="section-loader"><span class="btn-spinner" aria-hidden="true"></span><span>${esc(message)}</span></div>`;
+}
+
+function showSectionLoader(el, message = "Đang tải...") {
+  if (!el) return;
+  el.innerHTML = sectionLoaderHtml(message);
+  el.classList.add("is-section-loading");
+}
+
+function setButtonLoading(btn, loading, label = "Đang xử lý...") {
+  if (!btn || btn.tagName === "A") return;
+  if (loading) {
+    if (!btn.dataset.loadingOriginalHtml) {
+      btn.dataset.loadingOriginalHtml = btn.innerHTML;
+    }
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+    btn.setAttribute("aria-busy", "true");
+    btn.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${esc(label)}</span>`;
+  } else {
+    btn.disabled = false;
+    btn.classList.remove("is-loading");
+    btn.removeAttribute("aria-busy");
+    if (btn.dataset.loadingOriginalHtml) {
+      btn.innerHTML = btn.dataset.loadingOriginalHtml;
+      delete btn.dataset.loadingOriginalHtml;
+      if (typeof lucide !== "undefined") lucide.createIcons();
+    }
+  }
+}
+
+async function runWithLoading(btn, task, label = "Đang xử lý...") {
+  setButtonLoading(btn, true, label);
+  try {
+    return await task();
+  } finally {
+    setButtonLoading(btn, false);
+  }
+}
+
+function setPreviewLoading(loading) {
+  $("#landingPreview")?.closest(".preview-phone-frame")?.classList.toggle("is-preview-loading", loading);
+}
+
 const ADMIN_VIEWS = new Set(["list", "domains", "edit"]);
 const DOMAIN_TABS = new Set(["children", "parents"]);
 let applyingAdminUrl = false;
@@ -162,13 +246,15 @@ function switchDomainTab(tab, { syncUrl = true } = {}) {
 }
 
 async function openEditView(siteId = null) {
-  if (siteId) {
-    const site = await api(`/sites/${siteId}`);
-    await fillForm(site);
-  } else {
-    await fillForm(null);
-  }
-  showView("edit");
+  await runWithGlobalLoader(async () => {
+    if (siteId) {
+      const site = await api(`/sites/${siteId}`);
+      await fillForm(site);
+    } else {
+      await fillForm(null);
+    }
+    showView("edit");
+  }, siteId ? "Đang mở trang..." : "Đang tạo trang...");
 }
 
 async function applyAdminUrlState(state, { replace = false } = {}) {
@@ -284,17 +370,11 @@ function esc(s) {
     .replace(/</g, "&lt;");
 }
 
-function getClientBaseUrl() {
+function getLandingBaseUrl() {
   const port = serverConfig.landingPort || serverConfig.port || 4444;
   const base =
     serverConfig.landingBaseUrl || serverConfig.baseUrl || `http://127.0.0.1:${port}`;
-  return base.replace(/\/?$/, "/");
-}
-
-function injectPreviewBase(html) {
-  const base = getClientBaseUrl();
-  if (/<base\s/i.test(html)) return html;
-  return html.replace(/<head([^>]*)>/i, `<head$1><base href="${base}">`);
+  return base.replace(/\/$/, "");
 }
 
 async function fetchPreviewHtml(payload) {
@@ -323,15 +403,18 @@ async function updateLandingPreview() {
   if (!iframe || $("#editView")?.classList.contains("hidden")) return;
 
   const requestId = ++previewRequestId;
+  setPreviewLoading(true);
   try {
     const payload = getFormData();
     if (editingId) payload.id = editingId;
-    const html = injectPreviewBase(await fetchPreviewHtml(payload));
+    const html = await fetchPreviewHtml(payload);
     if (requestId !== previewRequestId) return;
     iframe.srcdoc = html;
   } catch (err) {
     if (requestId !== previewRequestId) return;
     iframe.srcdoc = `<!doctype html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:sans-serif;padding:20px;color:#64748b;line-height:1.5"><p>${esc(err.message)}</p></body></html>`;
+  } finally {
+    if (requestId === previewRequestId) setPreviewLoading(false);
   }
 }
 
@@ -345,7 +428,7 @@ function bindPreviewListeners() {
 
 function buildPreviewUrl(domain) {
   const d = (domain || "").trim().toLowerCase();
-  const base = getClientBaseUrl().replace(/\/$/, "");
+  const base = getLandingBaseUrl();
   if (!d || d === "localhost" || d === "127.0.0.1") return `${base}/`;
   return `${base}/?preview=${encodeURIComponent(d)}`;
 }
@@ -569,6 +652,7 @@ function startEditParentDomain(parent) {
 }
 
 async function loadParentDomains() {
+  showSectionLoader($("#parentDomainsTableBody"), "Đang tải domain cha...");
   const parents = await api("/parent-domains");
   $("#childParentId").innerHTML = renderParentOptions(parents);
 
@@ -616,11 +700,13 @@ async function loadParentDomains() {
       const domain = btn.dataset.parentDomain;
       if (!confirm(`Đặt ${domain} làm domain chính?\nOrigin CNAME chung: origin.${domain}`)) return;
       try {
-        const result = await api(`/parent-domains/${btn.dataset.setMainParent}/set-main`, {
-          method: "POST",
-        });
-        toast(`Đã đặt ${domain} làm domain chính · ${result.primary_origin_domain}`);
-        await loadDomains();
+        await runWithLoading(btn, async () => {
+          const result = await api(`/parent-domains/${btn.dataset.setMainParent}/set-main`, {
+            method: "POST",
+          });
+          toast(`Đã đặt ${domain} làm domain chính · ${result.primary_origin_domain}`);
+          await loadDomains();
+        }, "Đang đặt...");
       } catch (err) {
         alert(err.message);
       }
@@ -639,11 +725,13 @@ async function loadParentDomains() {
       const domain = btn.dataset.parentDomain;
       if (!confirm(`Tạo DNS (CNAME hoặc A) cho ${domain} bằng token domain cha?`)) return;
       try {
-        const result = await api(`/parent-domains/${btn.dataset.parentDns}/dns`, {
-          method: "POST",
-          body: JSON.stringify({ domain }),
-        });
-        toast(formatDnsToast(result));
+        await runWithLoading(btn, async () => {
+          const result = await api(`/parent-domains/${btn.dataset.parentDns}/dns`, {
+            method: "POST",
+            body: JSON.stringify({ domain }),
+          });
+          toast(formatDnsToast(result));
+        }, "Đang tạo DNS...");
       } catch (err) {
         alert(err.message);
       }
@@ -653,8 +741,10 @@ async function loadParentDomains() {
   $$("[data-parent-verify]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       try {
-        await api(`/parent-domains/${btn.dataset.parentVerify}/verify`, { method: "POST" });
-        toast("Token hợp lệ");
+        await runWithLoading(btn, async () => {
+          await api(`/parent-domains/${btn.dataset.parentVerify}/verify`, { method: "POST" });
+          toast("Token hợp lệ");
+        }, "Đang kiểm tra...");
       } catch (err) {
         alert(err.message);
       }
@@ -665,9 +755,11 @@ async function loadParentDomains() {
     btn.addEventListener("click", async () => {
       if (!confirm("Xóa domain cha này?")) return;
       try {
-        await api(`/parent-domains/${btn.dataset.delParent}`, { method: "DELETE" });
-        toast("Đã xóa domain cha");
-        await loadDomains();
+        await runWithLoading(btn, async () => {
+          await api(`/parent-domains/${btn.dataset.delParent}`, { method: "DELETE" });
+          toast("Đã xóa domain cha");
+          await loadDomains();
+        }, "Đang xóa...");
       } catch (err) {
         alert(err.message);
       }
@@ -679,6 +771,7 @@ async function loadParentDomains() {
 }
 
 async function loadDomains() {
+  showSectionLoader($("#subdomainsTableBody"), "Đang tải subdomain...");
   const [subdomains, config] = await Promise.all([
     api("/subdomains"),
     loadParentDomains().then(() => api("/config")),
@@ -744,10 +837,12 @@ async function loadDomains() {
     btn.addEventListener("click", async () => {
       if (!confirm("Xóa subdomain này và bản ghi DNS trên Cloudflare?")) return;
       try {
-        const result = await api(`/subdomains/${btn.dataset.delSubdomain}`, { method: "DELETE" });
-        const dnsFailed = result.dns?.error;
-        toast(dnsFailed ? "Đã xóa subdomain. DNS trên Cloudflare chưa xóa được." : "Đã xóa subdomain và DNS");
-        await loadDomains();
+        await runWithLoading(btn, async () => {
+          const result = await api(`/subdomains/${btn.dataset.delSubdomain}`, { method: "DELETE" });
+          const dnsFailed = result.dns?.error;
+          toast(dnsFailed ? "Đã xóa subdomain. DNS trên Cloudflare chưa xóa được." : "Đã xóa subdomain và DNS");
+          await loadDomains();
+        }, "Đang xóa...");
       } catch (err) {
         alert(err.message);
       }
@@ -759,8 +854,10 @@ async function loadDomains() {
       const domain = btn.dataset.cfDns;
       if (!confirm(`Tạo/cập nhật DNS (CNAME → origin hoặc A) cho ${domain} trên Cloudflare?`)) return;
       try {
-        const result = await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
-        toast(formatDnsToast(result));
+        await runWithLoading(btn, async () => {
+          const result = await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
+          toast(formatDnsToast(result));
+        }, "Đang tạo DNS...");
       } catch (err) {
         alert(err.message);
       }
@@ -835,7 +932,7 @@ function bindSiteCardActions() {
   $$("[data-save-domain]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const row = btn.closest("[data-site-row]");
-      void saveInlineDomain(btn.dataset.saveDomain, row);
+      void saveInlineDomain(btn.dataset.saveDomain, row, btn);
     });
   });
 
@@ -844,7 +941,7 @@ function bindSiteCardActions() {
   $$("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       try {
-        await openEditView(btn.dataset.edit);
+        await runWithLoading(btn, () => openEditView(btn.dataset.edit), "Đang mở...");
       } catch (err) {
         alert(err.message);
       }
@@ -858,28 +955,30 @@ function bindSiteCardActions() {
       const nextActive = !isActive;
       if (!confirm(`${isActive ? "Tắt" : "Bật"} hoạt động trang này? Trang sẽ ${isActive ? "không" : ""} hiển thị công khai.`)) return;
       try {
-        btn.disabled = true;
-        await api(`/sites/${siteId}`, {
-          method: "PUT",
-          body: JSON.stringify({ active: nextActive }),
-        });
-        toast(nextActive ? "Đã bật hoạt động" : "Đã tắt hoạt động");
-        await loadSites();
+        await runWithLoading(btn, async () => {
+          await api(`/sites/${siteId}`, {
+            method: "PUT",
+            body: JSON.stringify({ active: nextActive }),
+          });
+          toast(nextActive ? "Đã bật hoạt động" : "Đã tắt hoạt động");
+          await loadSites();
+        }, nextActive ? "Đang bật..." : "Đang tắt...");
       } catch (err) {
         alert(err.message);
-        btn.disabled = false;
       }
     });
   });
 
   $$("[data-delete-site]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      if (!confirm("XÃ³a trang nÃ y? Subdomain sáº½ Ä‘Æ°á»£c giáº£i phÃ³ng Ä‘á»ƒ gÃ¡n láº¡i.")) return;
+      if (!confirm("Xóa trang này? Subdomain sẽ được giải phóng để gán lại.")) return;
       try {
-        await api(`/sites/${btn.dataset.deleteSite}`, { method: "DELETE" });
-        toast("Đã xóa trang");
-        await loadSites();
-        await loadDomains();
+        await runWithLoading(btn, async () => {
+          await api(`/sites/${btn.dataset.deleteSite}`, { method: "DELETE" });
+          toast("Đã xóa trang");
+          await loadSites();
+          await loadDomains();
+        }, "Đang xóa...");
       } catch (err) {
         alert(err.message);
       }
@@ -981,6 +1080,7 @@ function renderSiteCards() {
 }
 
 async function loadSitesOptimized() {
+  showSectionLoader($("#sitesTableBody"), "Đang tải danh sách...");
   const [sites, subdomains] = await Promise.all([api("/sites"), api("/subdomains")]);
   siteListCache = sites;
   subdomainListCache = subdomains;
@@ -988,7 +1088,7 @@ async function loadSitesOptimized() {
   renderSiteCards();
 }
 
-async function saveInlineDomain(siteId, row) {
+async function saveInlineDomain(siteId, row, btn) {
   const pick = row.querySelector("[data-inline-sub-pick]");
   const input = row.querySelector("[data-inline-domain]");
   const domain = input?.value.trim();
@@ -1000,9 +1100,11 @@ async function saveInlineDomain(siteId, row) {
     ? { subdomain_id: Number(pick.value) }
     : { subdomain_id: null, domain };
   try {
-    await api(`/sites/${siteId}`, { method: "PUT", body: JSON.stringify(body) });
-    toast("Đã lưu domain");
-    await loadSites();
+    await runWithLoading(btn, async () => {
+      await api(`/sites/${siteId}`, { method: "PUT", body: JSON.stringify(body) });
+      toast("Đã lưu domain");
+      await loadSites();
+    }, "Đang lưu...");
   } catch (err) {
     alert(err.message);
   }
@@ -1062,7 +1164,7 @@ async function loadSites() {
   $$("[data-save-domain]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const row = btn.closest("[data-site-row]");
-      void saveInlineDomain(btn.dataset.saveDomain, row);
+      void saveInlineDomain(btn.dataset.saveDomain, row, btn);
     });
   });
 
@@ -1071,7 +1173,7 @@ async function loadSites() {
   $$("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       try {
-        await openEditView(btn.dataset.edit);
+        await runWithLoading(btn, () => openEditView(btn.dataset.edit), "Đang mở...");
       } catch (err) {
         alert(err.message);
       }
@@ -1085,16 +1187,16 @@ async function loadSites() {
       const nextActive = !isActive;
       if (!confirm(`${isActive ? "Tắt" : "Bật"} hoạt động trang này? Trang sẽ ${isActive ? "không" : ""} hiển thị công khai.`)) return;
       try {
-        btn.disabled = true;
-        await api(`/sites/${siteId}`, {
-          method: "PUT",
-          body: JSON.stringify({ active: nextActive }),
-        });
-        toast(nextActive ? "Đã bật hoạt động" : "Đã tắt hoạt động");
-        await loadSites();
+        await runWithLoading(btn, async () => {
+          await api(`/sites/${siteId}`, {
+            method: "PUT",
+            body: JSON.stringify({ active: nextActive }),
+          });
+          toast(nextActive ? "Đã bật hoạt động" : "Đã tắt hoạt động");
+          await loadSites();
+        }, nextActive ? "Đang bật..." : "Đang tắt...");
       } catch (err) {
         alert(err.message);
-        btn.disabled = false;
       }
     });
   });
@@ -1103,10 +1205,12 @@ async function loadSites() {
     btn.addEventListener("click", async () => {
       if (!confirm("Xóa trang này? Subdomain sẽ được giải phóng để gán lại.")) return;
       try {
-        await api(`/sites/${btn.dataset.deleteSite}`, { method: "DELETE" });
-        toast("Đã xóa trang");
-        await loadSites();
-        await loadDomains();
+        await runWithLoading(btn, async () => {
+          await api(`/sites/${btn.dataset.deleteSite}`, { method: "DELETE" });
+          toast("Đã xóa trang");
+          await loadSites();
+          await loadDomains();
+        }, "Đang xóa...");
       } catch (err) {
         alert(err.message);
       }
@@ -1152,6 +1256,7 @@ function showApp(loggedIn) {
 
 async function checkAuth() {
   const version = ++authCheckVersion;
+  showGlobalLoader("Đang tải dữ liệu...");
   try {
     if (!accessToken) await refreshAccessToken();
     if (version !== authCheckVersion) return;
@@ -1172,34 +1277,44 @@ async function checkAuth() {
     if (version !== authCheckVersion) return;
     setAccessToken(null);
     showApp(false);
+  } finally {
+    if (version === authCheckVersion) hideGlobalLoader();
   }
 }
 
 $("#loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const version = ++authCheckVersion;
+  const btn = e.submitter || e.target.querySelector('button[type="submit"]');
   try {
-    const data = await api("/login", {
-      method: "POST",
-      body: JSON.stringify({
-        username: $("#username").value.trim(),
-        password: $("#password").value,
-      }),
-    }, false);
-    if (version !== authCheckVersion) return;
-    setAccessToken(data.accessToken);
-    $("#loginError").style.display = "none";
-    showApp(true);
-    await loadServerConfig();
-    if (version !== authCheckVersion) return;
-    await loadSites();
-    if (version !== authCheckVersion) return;
-    const urlState = getAdminUrlState();
-    if (urlState.view !== "list" || urlState.siteId) {
-      await applyAdminUrlState(urlState, { replace: true });
-    } else {
-      showView("list", { replace: true });
-    }
+    await runWithLoading(btn, async () => {
+      const data = await api("/login", {
+        method: "POST",
+        body: JSON.stringify({
+          username: $("#username").value.trim(),
+          password: $("#password").value,
+        }),
+      }, false);
+      if (version !== authCheckVersion) return;
+      setAccessToken(data.accessToken);
+      $("#loginError").style.display = "none";
+      showApp(true);
+      showGlobalLoader("Đang tải dữ liệu...");
+      try {
+        await loadServerConfig();
+        if (version !== authCheckVersion) return;
+        await loadSites();
+        if (version !== authCheckVersion) return;
+        const urlState = getAdminUrlState();
+        if (urlState.view !== "list" || urlState.siteId) {
+          await applyAdminUrlState(urlState, { replace: true });
+        } else {
+          showView("list", { replace: true });
+        }
+      } finally {
+        hideGlobalLoader();
+      }
+    }, "Đang đăng nhập...");
   } catch (err) {
     if (version !== authCheckVersion) return;
     $("#loginError").textContent = err.message;
@@ -1208,8 +1323,9 @@ $("#loginForm").addEventListener("submit", async (e) => {
 });
 
 $("#logoutBtn").addEventListener("click", async () => {
+  const btn = $("#logoutBtn");
   try {
-    await api("/logout", { method: "POST" });
+    await runWithLoading(btn, () => api("/logout", { method: "POST" }), "Đang thoát...");
   } finally {
     setAccessToken(null);
     location.reload();
@@ -1217,19 +1333,31 @@ $("#logoutBtn").addEventListener("click", async () => {
 });
 
 $("#addSiteBtn").addEventListener("click", async () => {
-  await openEditView(null);
+  const btn = $("#addSiteBtn");
+  try {
+    await runWithLoading(btn, () => openEditView(null), "Đang mở...");
+  } catch (err) {
+    alert(err.message);
+  }
 });
 
 $("#exportSitesBtn")?.addEventListener("click", async () => {
-  const data = await api("/sites/export");
-  const text = JSON.stringify(data, null, 2);
-  const blob = new Blob([text], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `domains-export-${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  toast("Đã xuất file JSON");
+  const btn = $("#exportSitesBtn");
+  try {
+    await runWithLoading(btn, async () => {
+      const data = await api("/sites/export");
+      const text = JSON.stringify(data, null, 2);
+      const blob = new Blob([text], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `domains-export-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast("Đã xuất file JSON");
+    }, "Đang xuất...");
+  } catch (err) {
+    alert(err.message);
+  }
 });
 
 $("#siteSearchInput")?.addEventListener("input", renderSiteCards);
@@ -1243,10 +1371,13 @@ $("#copyPreviewUrl")?.addEventListener("click", () => {
 
 $("#cfDnsBtn")?.addEventListener("click", async () => {
   const domain = $("#domain").value.trim();
+  const btn = $("#cfDnsBtn");
   if (!domain || !confirm(`Tạo/cập nhật DNS (CNAME → origin hoặc A) cho ${domain} trên Cloudflare?`)) return;
   try {
-    const result = await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
-    toast(formatDnsToast(result));
+    await runWithLoading(btn, async () => {
+      const result = await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
+      toast(formatDnsToast(result));
+    }, "Đang tạo DNS...");
   } catch (err) {
     alert(err.message);
   }
@@ -1254,6 +1385,7 @@ $("#cfDnsBtn")?.addEventListener("click", async () => {
 
 $("#parentDomainForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const btn = e.submitter || $("#parentFormSubmitBtn");
   const editId = $("#parentEditId").value.trim();
   const payload = {
     domain: $("#parentDomain").value.trim(),
@@ -1264,26 +1396,28 @@ $("#parentDomainForm")?.addEventListener("submit", async (e) => {
   const token = $("#parentCfToken").value.trim();
   if (token) payload.cf_api_token = token;
   try {
-    if (editId) {
-      await api(`/parent-domains/${editId}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-      toast("Đã cập nhật domain cha");
-    } else {
-      if (!token) {
-        alert("Cần nhập Cloudflare API Token");
-        return;
+    await runWithLoading(btn, async () => {
+      if (editId) {
+        await api(`/parent-domains/${editId}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+        toast("Đã cập nhật domain cha");
+      } else {
+        if (!token) {
+          alert("Cần nhập Cloudflare API Token");
+          return;
+        }
+        payload.cf_api_token = token;
+        await api("/parent-domains", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        toast("Đã lưu domain cha");
       }
-      payload.cf_api_token = token;
-      await api("/parent-domains", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      toast("Đã lưu domain cha");
-    }
-    resetParentDomainForm();
-    await loadDomains();
+      resetParentDomainForm();
+      await loadDomains();
+    }, editId ? "Đang cập nhật..." : "Đang lưu...");
   } catch (err) {
     alert(err.message);
   }
@@ -1295,6 +1429,7 @@ $("#parentFormCancelBtn")?.addEventListener("click", () => {
 
 $("#subdomainForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const btn = e.submitter || e.target.querySelector('button[type="submit"]');
   const parentId = $("#childParentId").value;
   if (!parentId) {
     switchDomainTab("parents");
@@ -1302,20 +1437,22 @@ $("#subdomainForm")?.addEventListener("submit", async (e) => {
     return;
   }
   try {
-    const result = await api(`/parent-domains/${parentId}/subdomains`, {
-      method: "POST",
-      body: JSON.stringify({
-        subdomain: $("#childSubdomain").value.trim(),
-        auto_dns: true,
-      }),
-    });
-    $("#childSubdomain").value = "";
-    if (result.dns?.error) {
-      toast(`Đã tạo subdomain. DNS: ${result.dns.error}`);
-    } else {
-      toast(`Đã tạo subdomain + ${formatDnsToast(result.dns)}`);
-    }
-    await loadDomains();
+    await runWithLoading(btn, async () => {
+      const result = await api(`/parent-domains/${parentId}/subdomains`, {
+        method: "POST",
+        body: JSON.stringify({
+          subdomain: $("#childSubdomain").value.trim(),
+          auto_dns: true,
+        }),
+      });
+      $("#childSubdomain").value = "";
+      if (result.dns?.error) {
+        toast(`Đã tạo subdomain. DNS: ${result.dns.error}`);
+      } else {
+        toast(`Đã tạo subdomain + ${formatDnsToast(result.dns)}`);
+      }
+      await loadDomains();
+    }, "Đang tạo...");
   } catch (err) {
     alert(err.message);
   }
@@ -1346,17 +1483,20 @@ window.addEventListener("popstate", async (event) => {
 
 $("#siteForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const btn = e.submitter || e.target.querySelector('button[type="submit"]');
   const data = getFormData();
   try {
-    if (editingId) {
-      await api(`/sites/${editingId}`, { method: "PUT", body: JSON.stringify(data) });
-      toast("Đã cập nhật trang");
-    } else {
-      await api("/sites", { method: "POST", body: JSON.stringify(data) });
-      toast("Đã tạo trang mới");
-    }
-    await loadSites();
-    showView("list");
+    await runWithLoading(btn, async () => {
+      if (editingId) {
+        await api(`/sites/${editingId}`, { method: "PUT", body: JSON.stringify(data) });
+        toast("Đã cập nhật trang");
+      } else {
+        await api("/sites", { method: "POST", body: JSON.stringify(data) });
+        toast("Đã tạo trang mới");
+      }
+      await loadSites();
+      showView("list");
+    }, editingId ? "Đang lưu..." : "Đang tạo...");
   } catch (err) {
     alert(err.message);
   }
@@ -1364,13 +1504,16 @@ $("#siteForm").addEventListener("submit", async (e) => {
 
 $("#deleteBtn").addEventListener("click", async () => {
   if (!editingId || !confirm("Xóa trang này? Subdomain sẽ được giải phóng để gán lại.")) return;
+  const btn = $("#deleteBtn");
   try {
-    await api(`/sites/${editingId}`, { method: "DELETE" });
-    toast("Đã xóa trang");
-    editingId = null;
-    await loadSites();
-    await loadDomains();
-    showView("list");
+    await runWithLoading(btn, async () => {
+      await api(`/sites/${editingId}`, { method: "DELETE" });
+      toast("Đã xóa trang");
+      editingId = null;
+      await loadSites();
+      await loadDomains();
+      showView("list");
+    }, "Đang xóa...");
   } catch (err) {
     alert(err.message);
   }
@@ -1379,10 +1522,12 @@ $("#deleteBtn").addEventListener("click", async () => {
 $("#productUpload").addEventListener("change", async (e) => {
   if (!e.target.files.length) return;
   try {
-    const urls = await uploadFiles(e.target.files);
-    productImages.push(...urls);
-    renderProductImages();
-    e.target.value = "";
+    await runWithGlobalLoader(async () => {
+      const urls = await uploadFiles(e.target.files);
+      productImages.push(...urls);
+      renderProductImages();
+      e.target.value = "";
+    }, "Đang tải ảnh...");
   } catch (err) {
     alert(err.message);
   }
@@ -1400,10 +1545,12 @@ $("#productImages").addEventListener("click", (e) => {
 $("#detailUpload").addEventListener("change", async (e) => {
   if (!e.target.files.length) return;
   try {
-    const urls = await uploadFiles(e.target.files);
-    detailImages.push(...urls);
-    renderDetailImages();
-    e.target.value = "";
+    await runWithGlobalLoader(async () => {
+      const urls = await uploadFiles(e.target.files);
+      detailImages.push(...urls);
+      renderDetailImages();
+      e.target.value = "";
+    }, "Đang tải ảnh...");
   } catch (err) {
     alert(err.message);
   }

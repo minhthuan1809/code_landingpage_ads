@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trang web đang bảo trì</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #f4f4f5;
+        --surface: #ffffff;
+        --text: #1a1a1a;
+        --muted: #64748b;
+        --brand: #8b5a2b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: "Be Vietnam Pro", system-ui, sans-serif;
+        background: radial-gradient(circle at top, #fff 0%, var(--bg) 55%);
+        color: var(--text);
+      }
+      .card {
+        width: 100%;
+        max-width: 440px;
+        text-align: center;
+        padding: 40px 28px 36px;
+        background: var(--surface);
+        border-radius: 22px;
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.1);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+      }
+      .icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 18px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(139, 90, 43, 0.1);
+        color: var(--brand);
+      }
+      .icon svg { width: 32px; height: 32px; }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+        font-size: 15px;
+      }
+      .domain {
+        display: inline-block;
+        margin-top: 18px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 600;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+        </svg>
+      </div>
+      <h1>Trang web đang bảo trì</h1>
+      <p>Landing page này đã được tắt tạm thời trong hệ thống quản trị. Vui lòng quay lại sau.</p>
+      <% if (domain) { %>
+      <span class="domain"><%= domain %></span>
+      <% } %>
+    </main>
+  </body>
+</html>

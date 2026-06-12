@@ -29,6 +29,12 @@ const {
 const { getServerConfig, exportSites, buildSiteUrls } = require("../lib/urls");
 const { verifyToken } = require("../lib/cloudflare");
 const { provisionDomainDns, removeDomainDns, removeDnsForSite } = require("../lib/dns");
+const { preparePreviewHtml } = require("../lib/preview-html");
+const {
+  generateNginxLandingConfig,
+  syncNginxConfig,
+  DEPLOY_PATH,
+} = require("../lib/nginx-config");
 const {
   ACCESS_TTL_SEC,
   signAccessToken,
@@ -137,6 +143,26 @@ router.get("/config", requireAuth, (_req, res) => {
       proxied: cf.proxied,
     },
   });
+});
+
+router.get("/nginx/config", requireAuth, (_req, res) => {
+  res.json({
+    deployPath: DEPLOY_PATH,
+    targetPath: process.env.NGINX_CONFIG_PATH || "",
+    autoReload: process.env.NGINX_AUTO_RELOAD !== "0",
+    content: generateNginxLandingConfig(),
+  });
+});
+
+router.post("/nginx/sync", requireAuth, (req, res) => {
+  try {
+    const result = syncNginxConfig({
+      reload: req.body.reload !== false,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 router.post("/parent-domains/:id/set-main", requireAuth, (req, res) => {
@@ -319,7 +345,12 @@ router.delete("/subdomains/:id", requireAuth, async (req, res) => {
 router.post("/preview", requireAuth, (req, res) => {
   try {
     const site = buildPreviewSite(req.body);
-    res.render("landing", { site });
+    res.render("landing", { site }, (err, html) => {
+      if (err) {
+        return res.status(400).json({ error: err.message });
+      }
+      res.type("html").send(preparePreviewHtml(html, req));
+    });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }

@@ -1,6 +1,7 @@
 const express = require("express");
 const {
   getSiteByDomain,
+  getInactiveSiteByDomain,
   normalizeDomain,
   recordVisit,
 } = require("../lib/db");
@@ -36,10 +37,23 @@ function resolveRequestDomain(req) {
   return normalizeDomain(host);
 }
 
+function sendMaintenancePage(res, domain) {
+  res.set({
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+  });
+  res.status(503).render("maintenance", { domain });
+}
+
 router.get("/", (req, res) => {
   const domain = resolveRequestDomain(req);
-  const site = getSiteByDomain(domain);
+  const inactive = getInactiveSiteByDomain(domain);
+  if (inactive) {
+    return sendMaintenancePage(res, inactive.domain);
+  }
 
+  const site = getSiteByDomain(domain);
   if (!site) {
     return res.status(404).send(`
       <!DOCTYPE html>

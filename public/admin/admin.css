@@ -560,6 +560,124 @@ input[type="color"]::-webkit-color-swatch {
   border-radius: 8px;
 }
 
+.btn:disabled,
+.btn.is-loading {
+  cursor: wait;
+  pointer-events: none;
+  opacity: 0.82;
+}
+
+.btn.is-loading:hover {
+  transform: none;
+}
+
+.btn-spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.global-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(11, 15, 25, 0.45);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+[data-theme="light"] .global-loader {
+  background: rgba(248, 250, 252, 0.55);
+}
+
+.global-loader.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.global-loader-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.global-loader-spinner {
+  width: 22px;
+  height: 22px;
+  border-width: 3px;
+  color: var(--brand);
+}
+
+.section-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.section-loader .btn-spinner {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+  color: var(--brand);
+}
+
+.preview-phone-frame {
+  position: relative;
+}
+
+.preview-phone-frame.is-preview-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 15, 25, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: 2;
+}
+
+.preview-phone-frame.is-preview-loading::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 3px solid var(--brand);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  z-index: 3;
+}
+
 .btn-row {
   display: flex;
   gap: 12px;

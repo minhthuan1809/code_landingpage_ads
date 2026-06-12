@@ -37,6 +37,7 @@ function createAdminApp() {
   app.use(cookieParser());
 
   app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
+  app.use("/css", express.static(path.join(__dirname, "public", "css")));
   app.use("/admin", express.static(path.join(__dirname, "public", "admin")));
   app.use("/api/admin", adminRoutes);
 

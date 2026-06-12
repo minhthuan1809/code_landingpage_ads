@@ -477,37 +477,6 @@ body {
   border-top-right-radius: var(--radius);
 }
 
-.btn-chat {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  color: var(--text-secondary);
-  text-decoration: none;
-  box-shadow: var(--shadow-sm);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.btn-chat:hover {
-  background: var(--bg);
-  color: var(--text);
-  border-color: var(--text-muted);
-}
-
-.btn-chat:active {
-  transform: scale(0.95);
-}
-
-.btn-chat svg {
-  width: 24px;
-  height: 24px;
-}
-
 .buy-btn {
   flex: 1;
   display: flex;
@@ -733,7 +702,6 @@ body::after {
   border-top-right-radius: 20px;
 }
 
-.btn-chat,
 .buy-btn {
   height: 52px;
   border-radius: 14px;
