@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title><%= site.page_title %></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="/css/landing.css" />
+    <style>:root { --brand: <%= site.brand_color %>; --accent: <%= site.accent_color %>; }</style>
+  </head>
+  <body>
+    <% if (site.product_images.length > 0) { %>
+    <section class="carousel-wrap">
+      <div class="swiper product-swiper">
+        <div class="swiper-wrapper">
+          <% site.product_images.forEach(function(src, i) { %>
+          <div class="swiper-slide">
+            <img src="<%= src %>" alt="Ảnh sản phẩm <%= i + 1 %>" loading="<%= i === 0 ? 'eager' : 'lazy' %>" />
+          </div>
+          <% }); %>
+        </div>
+        <div class="carousel-dots" id="carouselDots"></div>
+        <span class="carousel-counter" id="imageCounter">1/<%= site.product_images.length %></span>
+      </div>
+    </section>
+    <% } %>
+
+    <section class="card card-pad">
+      <div class="tag-row">
+        <% if (site.tag_new) { %><span class="tag tag-new"><%= site.tag_new %></span><% } %>
+        <% if (site.tag_hot) { %><span class="tag tag-hot"><%= site.tag_hot %></span><% } %>
+      </div>
+      <h1 class="product-title"><%= site.product_title %></h1>
+      <div class="seller-row">
+        <div class="seller-avatar"><%= site.seller_avatar %></div>
+        <div class="seller-info">
+          <p class="seller-name"><%= site.seller_name %></p>
+          <p class="seller-meta"><%= site.seller_meta %></p>
+        </div>
+        <span class="seller-verified"><%= site.seller_verified %></span>
+      </div>
+      <div class="stats-row">
+        <% if (site.stat_chip_1) { %>
+        <span class="stat-chip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+          <%= site.stat_chip_1 %>
+        </span>
+        <% } %>
+        <% if (site.stat_chip_2) { %>
+        <span class="stat-chip highlight">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>
+          <%= site.stat_chip_2 %>
+        </span>
+        <% } %>
+      </div>
+    </section>
+
+    <section class="card product-detail">
+      <div class="section-head"><h2 class="section-title">Mô tả sản phẩm</h2></div>
+      <% if (site.detail_title) { %><p class="detail-title"><%= site.detail_title %></p><% } %>
+      <div class="rich-text"><%- site.detail_content %></div>
+      <% if (site.detail_images.length > 0) { %>
+      <div class="detail-images">
+        <% site.detail_images.forEach(function(src, i) { %>
+        <img class="detail-img" src="<%= src %>" alt="Ảnh mô tả <%= i + 1 %>" loading="lazy" />
+        <% }); %>
+      </div>
+      <% } %>
+    </section>
+
+    <% if (site.other_products.length > 0) { %>
+    <section class="card card-pad">
+      <div class="section-head"><h2 class="section-title">Các sản phẩm khác</h2></div>
+      <div class="other-products-grid">
+        <% site.other_products.forEach(function(p) { %>
+        <a class="other-product-card" href="<%= site.messenger_url %>" target="_blank" rel="noopener noreferrer">
+          <div class="other-product-thumb"><img src="<%= p.img %>" alt="<%= p.name %>" loading="lazy" /></div>
+          <div class="other-product-body">
+            <% if (p.tag) { %><span class="other-product-tag"><%= p.tag %></span><% } %>
+            <p class="other-product-name"><%= p.name %></p>
+          </div>
+        </a>
+        <% }); %>
+      </div>
+    </section>
+    <% } %>
+
+    <div class="footer-bar">
+      <a class="btn-chat" href="<%= site.messenger_url %>" target="_blank" rel="noopener noreferrer" aria-label="Nhắn tin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </a>
+      <a class="buy-btn" href="<%= site.messenger_url %>" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Mua ngay
+      </a>
+    </div>
+
+    <% if (site.product_images.length > 0) { %>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+      const counter = document.getElementById("imageCounter");
+      const swiper = new Swiper(".product-swiper", {
+        speed: 450,
+        autoHeight: true,
+        grabCursor: true,
+        pagination: { el: "#carouselDots", clickable: true, bulletClass: "carousel-dot", bulletActiveClass: "active" },
+        on: {
+          slideChange(s) {
+            counter.textContent = `${s.activeIndex + 1}/${s.slides.length}`;
+            s.updateAutoHeight();
+          },
+        },
+      });
+      document.querySelectorAll(".product-swiper img").forEach((img) => {
+        if (!img.complete) img.addEventListener("load", () => swiper.updateAutoHeight());
+      });
+    </script>
+    <% } %>
+  </body>
+</html>
