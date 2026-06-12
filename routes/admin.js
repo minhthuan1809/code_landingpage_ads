@@ -8,6 +8,7 @@ const {
   getAllParentDomains,
   getParentDomainById,
   createParentDomain,
+  updateParentDomain,
   deleteParentDomain,
   getAllSubdomains,
   createSubdomain,
@@ -182,6 +183,24 @@ router.post("/parent-domains", requireAuth, (req, res) => {
       active: req.body.active !== false,
     });
     res.status(201).json(parent);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.put("/parent-domains/:id", requireAuth, (req, res) => {
+  try {
+    const parent = updateParentDomain(Number(req.params.id), {
+      domain: req.body.domain,
+      name: req.body.name,
+      cf_api_token: req.body.cf_api_token,
+      cf_zone_id: req.body.cf_zone_id,
+      server_ip: req.body.server_ip,
+      cf_proxied: req.body.cf_proxied,
+      note: req.body.note,
+      active: req.body.active,
+    });
+    res.json(parent);
   } catch (e) {
     res.status(400).json({ error: e.message });
   }

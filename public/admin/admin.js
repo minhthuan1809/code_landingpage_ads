@@ -6,6 +6,8 @@ let detailImages = [];
 let otherProducts = [];
 let editingId = null;
 let serverConfig = { port: 3000 };
+let siteListCache = [];
+let subdomainListCache = [];
 let authCheckVersion = 0;
 let accessToken = sessionStorage.getItem("accessToken") || null;
 let refreshPromise = null;
@@ -79,23 +81,117 @@ function toast(msg) {
   setTimeout(() => el.remove(), 2500);
 }
 
-function showView(name) {
-  $("#listView").classList.toggle("hidden", name !== "list");
-  $("#domainsView").classList.toggle("hidden", name !== "domains");
-  $("#editView").classList.toggle("hidden", name !== "edit");
-  $$(".nav-btn[data-view]").forEach((b) => {
-    b.classList.toggle("active", b.dataset.view === name);
-  });
-  if (name === "domains") loadDomains();
-  if (typeof lucide !== "undefined") lucide.createIcons();
+const ADMIN_VIEWS = new Set(["list", "domains", "edit"]);
+const DOMAIN_TABS = new Set(["children", "parents"]);
+let applyingAdminUrl = false;
+
+function getActiveDomainTab() {
+  const active = document.querySelector("[data-domain-tab].active");
+  return active?.dataset.domainTab || "children";
 }
 
-function switchDomainTab(tab) {
-  $$("[data-domain-tab]").forEach((b) => {
-    b.classList.toggle("active", b.dataset.domainTab === tab);
+function getAdminUrlState() {
+  const params = new URLSearchParams(location.search);
+  return {
+    view: params.get("view") || "list",
+    tab: params.get("tab") || "children",
+    siteId: params.get("id") || null,
+  };
+}
+
+function buildAdminUrlState(view, tab) {
+  const state = { view: view || "list", tab: tab || "children", siteId: null };
+  if (state.view === "edit" && editingId) state.siteId = String(editingId);
+  if (state.view === "domains") state.tab = tab || getActiveDomainTab();
+  return state;
+}
+
+function syncAdminUrl(state, { replace = false } = {}) {
+  const view = ADMIN_VIEWS.has(state.view) ? state.view : "list";
+  const params = new URLSearchParams();
+  params.set("view", view);
+  if (view === "domains") {
+    params.set("tab", DOMAIN_TABS.has(state.tab) ? state.tab : "children");
+  }
+  if (view === "edit" && state.siteId) params.set("id", String(state.siteId));
+  const url = `${location.pathname}?${params.toString()}`;
+  const historyState = {
+    view,
+    tab: view === "domains" ? params.get("tab") : "children",
+    siteId: view === "edit" ? state.siteId || null : null,
+  };
+  if (replace) history.replaceState(historyState, "", url);
+  else history.pushState(historyState, "", url);
+}
+
+function showView(name, { syncUrl = true, replace = false, tab } = {}) {
+  const view = ADMIN_VIEWS.has(name) ? name : "list";
+  $("#listView").classList.toggle("hidden", view !== "list");
+  $("#domainsView").classList.toggle("hidden", view !== "domains");
+  $("#editView").classList.toggle("hidden", view !== "edit");
+  $$(".nav-btn[data-view]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.view === view);
   });
-  $("#domainChildrenPanel").classList.toggle("hidden", tab !== "children");
-  $("#domainParentsPanel").classList.toggle("hidden", tab !== "parents");
+  if (view === "domains") {
+    switchDomainTab(tab || getActiveDomainTab(), { syncUrl: false });
+    loadDomains();
+  }
+  if (typeof lucide !== "undefined") lucide.createIcons();
+  if (syncUrl && !applyingAdminUrl) {
+    syncAdminUrl(buildAdminUrlState(view, tab), { replace });
+  }
+}
+
+function switchDomainTab(tab, { syncUrl = true } = {}) {
+  const nextTab = DOMAIN_TABS.has(tab) ? tab : "children";
+  $$("[data-domain-tab]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.domainTab === nextTab);
+  });
+  $("#domainChildrenPanel").classList.toggle("hidden", nextTab !== "children");
+  $("#domainParentsPanel").classList.toggle("hidden", nextTab !== "parents");
+  if (syncUrl && !applyingAdminUrl && !$("#domainsView")?.classList.contains("hidden")) {
+    syncAdminUrl({ view: "domains", tab: nextTab });
+  }
+}
+
+async function openEditView(siteId = null) {
+  if (siteId) {
+    const site = await api(`/sites/${siteId}`);
+    await fillForm(site);
+  } else {
+    await fillForm(null);
+  }
+  showView("edit");
+}
+
+async function applyAdminUrlState(state, { replace = false } = {}) {
+  applyingAdminUrl = true;
+  try {
+    const view = ADMIN_VIEWS.has(state.view) ? state.view : "list";
+    const tab = DOMAIN_TABS.has(state.tab) ? state.tab : "children";
+
+    if (view === "edit") {
+      if (state.siteId) {
+        try {
+          await openEditView(state.siteId);
+        } catch {
+          toast("Không tìm thấy trang");
+          showView("list", { syncUrl: false });
+          syncAdminUrl({ view: "list" }, { replace: true });
+          return;
+        }
+      } else {
+        await openEditView(null);
+      }
+      syncAdminUrl(buildAdminUrlState("edit"), { replace });
+      return;
+    }
+
+    showView(view, { syncUrl: false, tab });
+    syncAdminUrl({ view, tab: view === "domains" ? tab : "children" }, { replace });
+  } finally {
+    applyingAdminUrl = false;
+  }
 }
 
 function initEditor() {
@@ -173,10 +269,12 @@ function buildProductionUrl(domain) {
 function renderSubdomainOptions(subdomains, selectedId = "") {
   return [
     '<option value="">— Nhập domain thủ công —</option>',
-    ...subdomains.map(
-      (s) =>
-        `<option value="${s.id}" data-domain="${esc(s.domain)}"${String(s.id) === String(selectedId) ? " selected" : ""}>${esc(s.domain)}${s.site_id && String(s.site_id) !== String(selectedId) ? " (đã gán)" : ""}</option>`,
-    ),
+    ...subdomains
+      .filter((s) => !s.site_id || String(s.site_id) === String(selectedId))
+      .map(
+        (s) =>
+          `<option value="${s.id}" data-domain="${esc(s.domain)}"${String(s.id) === String(selectedId) ? " selected" : ""}>${esc(s.domain)}</option>`,
+      ),
   ].join("");
 }
 
@@ -331,6 +429,33 @@ function renderParentOptions(parents, selectedId = "") {
   ].join("");
 }
 
+function resetParentDomainForm() {
+  $("#parentEditId").value = "";
+  $("#parentDomainForm").reset();
+  $("#parentCfToken").required = true;
+  $("#parentCfToken").placeholder = "Nhập Zone.DNS Edit API Token...";
+  $("#parentFormSummary").textContent = "Thêm Domain Cha mới (Cấu hình API Cloudflare)";
+  $("#parentFormSubmitLabel").textContent = "Lưu domain cha";
+  $("#parentFormCancelBtn")?.classList.add("hidden");
+}
+
+function startEditParentDomain(parent) {
+  $("#parentEditId").value = String(parent.id);
+  $("#parentDomain").value = parent.domain || "";
+  $("#parentCfToken").value = "";
+  $("#parentCfToken").required = false;
+  $("#parentCfToken").placeholder = "Để trống nếu không đổi token";
+  $("#parentZoneId").value = parent.cf_zone_id || "";
+  $("#parentServerIp").value = parent.server_ip || "";
+  $("#parentProxied").value = parent.cf_proxied ? "1" : "0";
+  $("#parentFormSummary").textContent = `Sửa domain cha: ${parent.domain}`;
+  $("#parentFormSubmitLabel").textContent = "Cập nhật domain cha";
+  $("#parentFormCancelBtn")?.classList.remove("hidden");
+  $("#parentDomainDetails")?.setAttribute("open", "");
+  $("#parentDomain").focus();
+  if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
 async function loadParentDomains() {
   const parents = await api("/parent-domains");
   $("#childParentId").innerHTML = renderParentOptions(parents);
@@ -344,6 +469,7 @@ async function loadParentDomains() {
         <td><code>${esc(p.server_ip || "—")}</code></td>
         <td><span class="badge ${p.has_token ? "badge-on" : "badge-off"}">${p.has_token ? "OK" : "Thiếu"}</span></td>
         <td class="domain-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-edit-parent="${p.id}">Sửa</button>
           <button type="button" class="btn btn-ghost btn-sm" data-parent-dns="${p.id}" data-parent-domain="${esc(p.domain)}">DNS</button>
           <button type="button" class="btn btn-ghost btn-sm" data-parent-verify="${p.id}">Test</button>
           <button type="button" class="btn btn-danger btn-sm" data-del-parent="${p.id}">Xóa</button>
@@ -352,6 +478,13 @@ async function loadParentDomains() {
         )
         .join("")
     : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:24px">Chưa có domain cha. Mở form phía trên để thêm token.</td></tr>`;
+
+  $$("[data-edit-parent]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const parent = parents.find((p) => String(p.id) === btn.dataset.editParent);
+      if (parent) startEditParentDomain(parent);
+    });
+  });
 
   $$("[data-parent-dns]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -434,9 +567,11 @@ async function loadDomains() {
 
   $$("[data-edit-site]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const site = await api(`/sites/${btn.dataset.editSite}`);
-      await fillForm(site);
-      showView("edit");
+      try {
+        await openEditView(btn.dataset.editSite);
+      } catch (err) {
+        alert(err.message);
+      }
     });
   });
 
@@ -494,6 +629,175 @@ function syncInlineDomainRow(row) {
   }
 }
 
+function updateSiteOverview(sites) {
+  const activeCount = sites.filter((site) => site.active).length;
+  const visitTotal = sites.reduce((sum, site) => sum + Number(site.visit_count || 0), 0);
+  $("#siteTotalCount").textContent = formatVisits(sites.length);
+  $("#siteActiveCount").textContent = formatVisits(activeCount);
+  $("#siteInactiveCount").textContent = formatVisits(sites.length - activeCount);
+  $("#siteVisitTotal").textContent = formatVisits(visitTotal);
+}
+
+function getFilteredSites() {
+  const q = ($("#siteSearchInput")?.value || "").trim().toLowerCase();
+  const status = $("#siteStatusFilter")?.value || "all";
+  return siteListCache.filter((site) => {
+    const haystack = [
+      site.domain,
+      site.name,
+      site.page_title,
+      site.product_title,
+      site.preview_url,
+    ].join(" ").toLowerCase();
+    const matchesSearch = !q || haystack.includes(q);
+    const matchesStatus =
+      status === "all" ||
+      (status === "active" && site.active) ||
+      (status === "inactive" && !site.active);
+    return matchesSearch && matchesStatus;
+  });
+}
+
+function bindSiteCardActions() {
+  $$("[data-site-row]").forEach((row) => syncInlineDomainRow(row));
+
+  $$("[data-inline-sub-pick]").forEach((pick) => {
+    pick.addEventListener("change", () => {
+      syncInlineDomainRow(pick.closest("[data-site-row]"));
+    });
+  });
+
+  $$("[data-save-domain]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const row = btn.closest("[data-site-row]");
+      void saveInlineDomain(btn.dataset.saveDomain, row);
+    });
+  });
+
+  bindCopyUrlClicks();
+
+  $$("[data-edit]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try {
+        await openEditView(btn.dataset.edit);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  $$("[data-delete-site]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("XÃ³a trang nÃ y? Subdomain sáº½ Ä‘Æ°á»£c giáº£i phÃ³ng Ä‘á»ƒ gÃ¡n láº¡i.")) return;
+      try {
+        await api(`/sites/${btn.dataset.deleteSite}`, { method: "DELETE" });
+        toast("ÄÃ£ xÃ³a trang");
+        await loadSites();
+        await loadDomains();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
+
+  if (typeof lucide !== "undefined") lucide.createIcons();
+}
+
+function renderSiteCards() {
+  const filteredSites = getFilteredSites();
+  const listEl = $("#sitesTableBody");
+
+  if (!siteListCache.length) {
+    listEl.innerHTML = `
+      <div class="site-empty-state">
+        <i data-lucide="layout-template"></i>
+        <strong>Chưa có trang nào</strong>
+        <span>Bấm "Thêm domain mới" để tạo landing page đầu tiên.</span>
+      </div>`;
+    bindSiteCardActions();
+    return;
+  }
+
+  if (!filteredSites.length) {
+    listEl.innerHTML = `
+      <div class="site-empty-state">
+        <i data-lucide="search-x"></i>
+        <strong>Không tìm thấy trang phù hợp</strong>
+        <span>Thử đổi từ khóa hoặc bộ lọc trạng thái.</span>
+      </div>`;
+    bindSiteCardActions();
+    return;
+  }
+
+  listEl.innerHTML = filteredSites
+    .map((s) => {
+      const currentSub = subdomainListCache.find((sub) => Number(sub.site_id) === Number(s.id));
+      const subOptions = inlineSubdomainOptions(subdomainListCache, s.id, currentSub?.id || "");
+      const title = s.name || s.product_title || s.page_title || "Chưa đặt tên";
+      return `
+      <article class="site-card" data-site-row="${s.id}">
+        <div class="site-card-main">
+          <div class="site-card-heading">
+            <span class="site-status-dot ${s.active ? "is-active" : "is-inactive"}"></span>
+            <div>
+              <h3>${esc(s.domain)}</h3>
+              <p>${esc(title)}</p>
+            </div>
+          </div>
+          <span class="badge ${s.active ? "badge-on" : "badge-off"}">${s.active ? "Hoạt động" : "Tắt"}</span>
+        </div>
+
+        <div class="site-card-meta">
+          <button type="button" class="site-url-pill url-copy" data-copy-url="${esc(s.preview_url)}" title="Bấm để copy URL">
+            <i data-lucide="copy"></i>
+            <span>${esc(s.preview_url)}</span>
+          </button>
+          <div class="site-visit-pill">
+            <i data-lucide="mouse-pointer-click"></i>
+            <strong>${formatVisits(s.visit_count)}</strong>
+            <span>lượt truy cập</span>
+          </div>
+        </div>
+
+        <div class="site-domain-toolbar">
+          <select class="inline-domain-select" data-inline-sub-pick data-site-id="${s.id}" title="Chọn subdomain">
+            <option value="">Thủ công</option>
+            ${subOptions}
+          </select>
+          <span class="inline-domain-manual${currentSub ? " hidden" : ""}" data-inline-manual-wrap>
+            <input type="text" class="inline-domain-input" data-inline-domain data-site-id="${s.id}" value="${esc(s.domain)}" placeholder="domain.com" />
+          </span>
+          <button type="button" class="btn btn-primary btn-sm" data-save-domain="${s.id}">
+            <i data-lucide="save"></i> Lưu
+          </button>
+        </div>
+
+        <div class="site-actions">
+          <button type="button" class="btn btn-ghost btn-sm" data-edit="${s.id}">
+            <i data-lucide="pencil"></i> Sửa
+          </button>
+          <a class="btn btn-ghost btn-sm" href="${esc(s.preview_url)}" target="_blank" rel="noopener">
+            <i data-lucide="external-link"></i> Xem
+          </a>
+          <button type="button" class="btn btn-danger btn-sm" data-delete-site="${s.id}">
+            <i data-lucide="trash-2"></i> Xóa
+          </button>
+        </div>
+      </article>`;
+    })
+    .join("");
+
+  bindSiteCardActions();
+}
+
+async function loadSitesOptimized() {
+  const [sites, subdomains] = await Promise.all([api("/sites"), api("/subdomains")]);
+  siteListCache = sites;
+  subdomainListCache = subdomains;
+  updateSiteOverview(sites);
+  renderSiteCards();
+}
+
 async function saveInlineDomain(siteId, row) {
   const pick = row.querySelector("[data-inline-sub-pick]");
   const input = row.querySelector("[data-inline-domain]");
@@ -515,6 +819,7 @@ async function saveInlineDomain(siteId, row) {
 }
 
 async function loadSites() {
+  return loadSitesOptimized();
   const [sites, subdomains] = await Promise.all([api("/sites"), api("/subdomains")]);
   $("#sitesTableBody").innerHTML = sites.length
     ? sites
@@ -575,9 +880,11 @@ async function loadSites() {
 
   $$("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const site = await api(`/sites/${btn.dataset.edit}`);
-      await fillForm(site);
-      showView("edit");
+      try {
+        await openEditView(btn.dataset.edit);
+      } catch (err) {
+        alert(err.message);
+      }
     });
   });
 
@@ -643,6 +950,13 @@ async function checkAuth() {
     await loadServerConfig();
     if (version !== authCheckVersion) return;
     await loadSites();
+    if (version !== authCheckVersion) return;
+    const urlState = getAdminUrlState();
+    if (urlState.view !== "list" || urlState.siteId) {
+      await applyAdminUrlState(urlState, { replace: true });
+    } else {
+      showView("list", { replace: true });
+    }
   } catch {
     if (version !== authCheckVersion) return;
     setAccessToken(null);
@@ -668,6 +982,13 @@ $("#loginForm").addEventListener("submit", async (e) => {
     await loadServerConfig();
     if (version !== authCheckVersion) return;
     await loadSites();
+    if (version !== authCheckVersion) return;
+    const urlState = getAdminUrlState();
+    if (urlState.view !== "list" || urlState.siteId) {
+      await applyAdminUrlState(urlState, { replace: true });
+    } else {
+      showView("list", { replace: true });
+    }
   } catch (err) {
     if (version !== authCheckVersion) return;
     $("#loginError").textContent = err.message;
@@ -685,8 +1006,7 @@ $("#logoutBtn").addEventListener("click", async () => {
 });
 
 $("#addSiteBtn").addEventListener("click", async () => {
-  await fillForm(null);
-  showView("edit");
+  await openEditView(null);
 });
 
 $("#exportSitesBtn")?.addEventListener("click", async () => {
@@ -700,6 +1020,9 @@ $("#exportSitesBtn")?.addEventListener("click", async () => {
   URL.revokeObjectURL(a.href);
   toast("Đã xuất file JSON");
 });
+
+$("#siteSearchInput")?.addEventListener("input", renderSiteCards);
+$("#siteStatusFilter")?.addEventListener("change", renderSiteCards);
 
 $("#domain")?.addEventListener("input", updateDomainUrlPreview);
 
@@ -720,23 +1043,43 @@ $("#cfDnsBtn")?.addEventListener("click", async () => {
 
 $("#parentDomainForm")?.addEventListener("submit", async (e) => {
   e.preventDefault();
+  const editId = $("#parentEditId").value.trim();
+  const payload = {
+    domain: $("#parentDomain").value.trim(),
+    cf_zone_id: $("#parentZoneId").value.trim(),
+    server_ip: $("#parentServerIp").value.trim(),
+    cf_proxied: $("#parentProxied").value === "1",
+  };
+  const token = $("#parentCfToken").value.trim();
+  if (token) payload.cf_api_token = token;
   try {
-    await api("/parent-domains", {
-      method: "POST",
-      body: JSON.stringify({
-        domain: $("#parentDomain").value.trim(),
-        cf_api_token: $("#parentCfToken").value.trim(),
-        cf_zone_id: $("#parentZoneId").value.trim(),
-        server_ip: $("#parentServerIp").value.trim(),
-        cf_proxied: $("#parentProxied").value === "1",
-      }),
-    });
-    $("#parentDomainForm").reset();
-    toast("Đã lưu domain cha");
+    if (editId) {
+      await api(`/parent-domains/${editId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      toast("Đã cập nhật domain cha");
+    } else {
+      if (!token) {
+        alert("Cần nhập Cloudflare API Token");
+        return;
+      }
+      payload.cf_api_token = token;
+      await api("/parent-domains", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      toast("Đã lưu domain cha");
+    }
+    resetParentDomainForm();
     await loadDomains();
   } catch (err) {
     alert(err.message);
   }
+});
+
+$("#parentFormCancelBtn")?.addEventListener("click", () => {
+  resetParentDomainForm();
 });
 
 $("#subdomainForm")?.addEventListener("submit", async (e) => {
@@ -777,9 +1120,14 @@ $("#cancelBtn").addEventListener("click", () => showView("list"));
 
 $$(".nav-btn[data-view]").forEach((btn) => {
   btn.addEventListener("click", () => {
-    if (btn.dataset.view === "edit" && !editingId) void fillForm(null);
     showView(btn.dataset.view);
   });
+});
+
+window.addEventListener("popstate", async (event) => {
+  if (!$("#app")?.classList.contains("is-open")) return;
+  const state = event.state || getAdminUrlState();
+  await applyAdminUrlState(state, { replace: true });
 });
 
 $("#siteForm").addEventListener("submit", async (e) => {

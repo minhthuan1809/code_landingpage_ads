@@ -30,7 +30,7 @@ initDb()
     seedIfEmpty();
 
     app.listen(PORT, () => {
-      console.log(`\n  🛍  NARA Shop CMS`);
+      console.log(`\n  🛍  LANDING PAGE CMS`);
       console.log(`  Trang web:  http://localhost:${PORT}`);
       console.log(`  Admin:      http://localhost:${PORT}/admin/`);
       console.log(`  SQLite:     data/shop.db`);

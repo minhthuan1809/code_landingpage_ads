@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin - NARA Shop CMS</title>
+    <title>Admin - LANDING PAGE CMS</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" />
     <link rel="stylesheet" href="admin.css" />
@@ -27,7 +27,7 @@
       <div class="login-box">
         <div class="login-header">
           <div class="login-logo"><i data-lucide="shopping-bag"></i></div>
-          <h1>NARA Shop CMS</h1>
+          <h1>LANDING PAGE CMS</h1>
           <p>Hệ thống quản lý landing page multi-domain</p>
         </div>
         <form id="loginForm">
@@ -60,7 +60,7 @@
         <div class="sidebar-brand">
           <div class="brand-logo"><i data-lucide="shopping-bag"></i></div>
           <div>
-            <h2>NARA Shop</h2>
+            <h2>LANDING PAGE</h2>
             <p class="sub">Quản trị multi-domain</p>
           </div>
         </div>
@@ -116,20 +116,38 @@
             <p>Mỗi tên miền / subdomain tương đương với một trang web bán hàng riêng. Bạn có thể tạo subdomain tại tab <strong>Quản lý domain</strong> rồi gắn trang cho nó tại đây.</p>
           </div>
 
-          <div class="panel table-responsive">
-            <table class="sites-table">
-              <thead>
-                <tr>
-                  <th>Domain</th>
-                  <th>URL truy cập</th>
-                  <th>Tên quản lý</th>
-                  <th>Lượt truy cập</th>
-                  <th>Trạng thái</th>
-                  <th style="text-align: right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody id="sitesTableBody"></tbody>
-            </table>
+          <div class="site-overview-grid" aria-label="Tổng quan danh sách trang">
+            <div class="site-stat-card">
+              <span>Tổng trang</span>
+              <strong id="siteTotalCount">0</strong>
+            </div>
+            <div class="site-stat-card">
+              <span>Đang chạy</span>
+              <strong id="siteActiveCount">0</strong>
+            </div>
+            <div class="site-stat-card">
+              <span>Tạm tắt</span>
+              <strong id="siteInactiveCount">0</strong>
+            </div>
+            <div class="site-stat-card">
+              <span>Lượt truy cập</span>
+              <strong id="siteVisitTotal">0</strong>
+            </div>
+          </div>
+
+          <div class="panel site-list-panel">
+            <div class="site-list-toolbar">
+              <div class="site-search-wrap">
+                <i data-lucide="search"></i>
+                <input type="search" id="siteSearchInput" placeholder="Tìm theo domain, tên quản lý, sản phẩm..." />
+              </div>
+              <select id="siteStatusFilter" aria-label="Lọc trạng thái trang">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang hoạt động</option>
+                <option value="inactive">Tạm tắt</option>
+              </select>
+            </div>
+            <div id="sitesTableBody" class="site-card-list"></div>
           </div>
         </div>
 
@@ -192,11 +210,12 @@
 
           <!-- CF Domain Parents Panel -->
           <div id="domainParentsPanel" class="hidden">
-            <details class="panel domain-details">
+            <details class="panel domain-details" id="parentDomainDetails">
               <summary class="domain-details-summary">
-                <i data-lucide="plus-circle"></i> <span>Thêm Domain Cha mới (Cấu hình API Cloudflare)</span>
+                <i data-lucide="plus-circle"></i> <span id="parentFormSummary">Thêm Domain Cha mới (Cấu hình API Cloudflare)</span>
               </summary>
               <form id="parentDomainForm" class="form-grid domain-form-grid" style="margin-top:20px">
+                <input type="hidden" id="parentEditId" value="" />
                 <div class="form-group">
                   <label>Tên miền chính (Domain)</label>
                   <input type="text" id="parentDomain" placeholder="Ví dụ: shopcuatoi.club" required />
@@ -220,10 +239,11 @@
                     <option value="0">Tắt Cloudflare Proxy (Đám mây xám - DNS Only)</option>
                   </select>
                 </div>
-                <div class="form-group full" style="margin-bottom:0">
-                  <button type="submit" class="btn btn-primary">
-                    <i data-lucide="save"></i> Lưu domain cha
+                <div class="form-group full" style="margin-bottom:0; display:flex; gap:10px; flex-wrap:wrap">
+                  <button type="submit" class="btn btn-primary" id="parentFormSubmitBtn">
+                    <i data-lucide="save"></i> <span id="parentFormSubmitLabel">Lưu domain cha</span>
                   </button>
+                  <button type="button" class="btn btn-ghost hidden" id="parentFormCancelBtn">Hủy sửa</button>
                 </div>
               </form>
             </details>
@@ -271,7 +291,7 @@
                 <div class="form-group full" id="manualDomainGroup">
                   <label>Nhập tên miền (Domain)</label>
                   <input type="text" id="domain" placeholder="Ví dụ: shopcuatoi.com hoặc localhost" required />
-                  <p class="domain-hint">Không nhập tiền tố http/https hay www. Ví dụ: shopcuatoi.com. Khi test trên máy tính, sử dụng: <code>localhost</code>.</p>
+                  <p class="domain-hint">Mỗi trang chỉ dùng một domain. Domain đã gán cho trang khác sẽ không chọn hoặc lưu được. Không nhập tiền tố http/https hay www. Ví dụ: shopcuatoi.com. Khi test trên máy tính, sử dụng: <code>localhost</code>.</p>
                   
                   <div class="url-preview-box" id="domainUrlPreview">
                     <div class="url-preview-line">
@@ -469,6 +489,8 @@
         </div>
       </main>
     </div>
+
+    <footer class="admin-site-footer">by MINHTHUAN</footer>
 
     <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
     <script src="admin.js"></script>
