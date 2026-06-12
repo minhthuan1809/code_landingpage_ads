@@ -194,8 +194,20 @@ textarea { min-height: 80px; resize: vertical; }
   font-size: 14px;
 }
 
-.sites-table td:nth-child(3) {
+.sites-table td.site-visits-cell {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.sites-table td.site-name-cell {
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sites-table td.site-status-cell {
+  white-space: nowrap;
 }
 
 .sites-table th, .sites-table td {
@@ -412,16 +424,28 @@ textarea { min-height: 80px; resize: vertical; }
 }
 
 .site-domain-cell {
-  min-width: 260px;
+  min-width: 240px;
+  max-width: 340px;
 }
 
-.site-domain-cell .inline-domain-select,
-.site-domain-cell .inline-domain-input {
-  display: block;
-  width: 100%;
-  max-width: 240px;
-  margin-bottom: 6px;
-  padding: 6px 8px;
+.site-domain-current {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  word-break: break-all;
+  line-height: 1.35;
+}
+
+.site-domain-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.site-domain-toolbar .inline-domain-select,
+.site-domain-toolbar .inline-domain-input {
+  padding: 5px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--surface2);
@@ -429,20 +453,54 @@ textarea { min-height: 80px; resize: vertical; }
   font-size: 12px;
 }
 
-.site-domain-cell .inline-domain-input.is-locked {
-  opacity: 0.85;
+.site-domain-toolbar .inline-domain-select {
+  flex: 1 1 120px;
+  min-width: 110px;
+  max-width: 180px;
+}
+
+.inline-domain-manual {
+  flex: 1 1 120px;
+  min-width: 100px;
+}
+
+.inline-domain-manual .inline-domain-input {
+  width: 100%;
+}
+
+.site-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.site-actions-cell {
+  min-width: 150px;
 }
 
 .url-cell {
-  max-width: 280px;
+  max-width: 260px;
+}
+
+.url-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .url-code {
-  display: block;
+  flex: 1;
+  min-width: 0;
   font-size: 11px;
+  line-height: 1.4;
   word-break: break-all;
-  margin-bottom: 4px;
   color: var(--muted);
+}
+
+.url-inline .btn-sm {
+  flex-shrink: 0;
+  padding: 4px 8px;
 }
 
 .url-preview-box {

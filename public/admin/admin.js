@@ -486,15 +486,14 @@ function inlineSubdomainOptions(subdomains, siteId, selectedId) {
 function syncInlineDomainRow(row) {
   const pick = row.querySelector("[data-inline-sub-pick]");
   const input = row.querySelector("[data-inline-domain]");
+  const manualWrap = row.querySelector("[data-inline-manual-wrap]");
   if (!pick || !input) return;
   const option = pick.selectedOptions[0];
   if (pick.value && option?.dataset.domain) {
     input.value = option.dataset.domain;
-    input.readOnly = true;
-    input.classList.add("is-locked");
+    manualWrap?.classList.add("hidden");
   } else {
-    input.readOnly = false;
-    input.classList.remove("is-locked");
+    manualWrap?.classList.remove("hidden");
   }
 }
 
@@ -529,23 +528,35 @@ async function loadSites() {
           return `
       <tr data-site-row="${s.id}">
         <td class="site-domain-cell">
-          <select class="inline-domain-select" data-inline-sub-pick data-site-id="${s.id}">
-            <option value="">— Domain thủ công —</option>
-            ${subOptions}
-          </select>
-          <input type="text" class="inline-domain-input" data-inline-domain data-site-id="${s.id}" value="${esc(s.domain)}" placeholder="domain.com" />
-          <button type="button" class="btn btn-ghost btn-sm" data-save-domain="${s.id}">Lưu</button>
+          <div class="site-domain-current">${esc(s.domain)}</div>
+          <div class="site-domain-toolbar">
+            <select class="inline-domain-select" data-inline-sub-pick data-site-id="${s.id}" title="Chọn subdomain">
+              <option value="">Thủ công</option>
+              ${subOptions}
+            </select>
+            <span class="inline-domain-manual${currentSub ? " hidden" : ""}" data-inline-manual-wrap>
+              <input type="text" class="inline-domain-input" data-inline-domain data-site-id="${s.id}" value="${esc(s.domain)}" placeholder="domain.com" />
+            </span>
+            <button type="button" class="btn btn-primary btn-sm" data-save-domain="${s.id}">Lưu</button>
+          </div>
         </td>
         <td class="url-cell">
-          <code class="url-code">${esc(s.preview_url)}</code>
-          <button type="button" class="btn btn-ghost btn-sm" data-copy-url="${esc(s.preview_url)}">Copy</button>
+          <div class="url-inline">
+            <code class="url-code">${esc(s.preview_url)}</code>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-url="${esc(s.preview_url)}" title="Copy URL">Copy</button>
+          </div>
         </td>
-        <td>${esc(s.name || s.product_title?.slice(0, 30) || "—")}</td>
-        <td><strong>${formatVisits(s.visit_count)}</strong></td>
-        <td><span class="badge ${s.active ? "badge-on" : "badge-off"}">${s.active ? "Hoạt động" : "Tắt"}</span></td>
-        <td>
-          <button class="btn btn-ghost btn-sm" data-edit="${s.id}">Sửa</button>
-          <a class="btn btn-ghost btn-sm" href="${esc(s.preview_url)}" target="_blank" rel="noopener">Xem</a>
+        <td class="site-name-cell">${esc(s.name || s.product_title?.slice(0, 30) || "—")}</td>
+        <td class="site-visits-cell"><strong>${formatVisits(s.visit_count)}</strong></td>
+        <td class="site-status-cell">
+          <span class="badge ${s.active ? "badge-on" : "badge-off"}">${s.active ? "Hoạt động" : "Tắt"}</span>
+        </td>
+        <td class="site-actions-cell">
+          <div class="site-actions">
+            <button type="button" class="btn btn-ghost btn-sm" data-edit="${s.id}">Sửa</button>
+            <a class="btn btn-ghost btn-sm" href="${esc(s.preview_url)}" target="_blank" rel="noopener">Xem</a>
+            <button type="button" class="btn btn-danger btn-sm" data-delete-site="${s.id}">Xóa</button>
+          </div>
         </td>
       </tr>`;
         })
@@ -576,6 +587,20 @@ async function loadSites() {
       const site = await api(`/sites/${btn.dataset.edit}`);
       await fillForm(site);
       showView("edit");
+    });
+  });
+
+  $$("[data-delete-site]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Xóa trang này? Subdomain sẽ được giải phóng để gán lại.")) return;
+      try {
+        await api(`/sites/${btn.dataset.deleteSite}`, { method: "DELETE" });
+        toast("Đã xóa trang");
+        await loadSites();
+        await loadDomains();
+      } catch (err) {
+        alert(err.message);
+      }
     });
   });
 }
