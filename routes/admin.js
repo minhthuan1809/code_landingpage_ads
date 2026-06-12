@@ -160,8 +160,8 @@ router.post("/cloudflare/dns", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Domain không hợp lệ để tạo DNS" });
   }
   try {
-    const { record, source } = await provisionDomainDns(domain);
-    res.json({ ok: true, record, source });
+    const dns = await provisionDomainDns(domain);
+    res.json({ ok: true, ...dns });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
@@ -179,6 +179,7 @@ router.post("/parent-domains", requireAuth, (req, res) => {
       cf_api_token: req.body.cf_api_token,
       cf_zone_id: req.body.cf_zone_id,
       server_ip: req.body.server_ip,
+      cname_target: req.body.cname_target,
       cf_proxied: req.body.cf_proxied !== false,
       note: req.body.note,
       active: req.body.active !== false,
@@ -197,6 +198,7 @@ router.put("/parent-domains/:id", requireAuth, (req, res) => {
       cf_api_token: req.body.cf_api_token,
       cf_zone_id: req.body.cf_zone_id,
       server_ip: req.body.server_ip,
+      cname_target: req.body.cname_target,
       cf_proxied: req.body.cf_proxied,
       note: req.body.note,
       active: req.body.active,
@@ -232,8 +234,8 @@ router.post("/parent-domains/:id/dns", requireAuth, async (req, res) => {
   if (!parent) return res.status(404).json({ error: "Không tìm thấy" });
   const domain = String(req.body.domain || parent.domain).trim().toLowerCase();
   try {
-    const { record, source } = await provisionDomainDns(domain);
-    res.json({ ok: true, record, source, domain });
+    const dns = await provisionDomainDns(domain);
+    res.json({ ok: true, ...dns, domain });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }

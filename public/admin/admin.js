@@ -531,11 +531,31 @@ function renderParentOptions(parents, selectedId = "") {
   ].join("");
 }
 
+function defaultCnameTargetForParent(domain) {
+  const normalized = String(domain || "")
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .split("/")[0]
+    .replace(/\.$/, "");
+  return normalized ? `origin.${normalized}` : "";
+}
+
+function formatDnsToast(result) {
+  if (!result) return "Đã cấu hình DNS";
+  if (result.recordType === "CNAME") {
+    return `Đã tạo CNAME → ${result.cnameTarget || result.record?.content || "origin"}`;
+  }
+  if (result.recordType === "A") return "Đã tạo/cập nhật bản ghi A trỏ IP server";
+  return "Đã cấu hình DNS trên Cloudflare";
+}
+
 function resetParentDomainForm() {
   $("#parentEditId").value = "";
   $("#parentDomainForm").reset();
   $("#parentCfToken").required = true;
   $("#parentCfToken").placeholder = "Nhập Zone.DNS Edit API Token...";
+  $("#parentCnameTarget").placeholder = "Mặc định: origin.tenmiencha.com";
   $("#parentFormSummary").textContent = "Thêm Domain Cha mới (Cấu hình API Cloudflare)";
   $("#parentFormSubmitLabel").textContent = "Lưu domain cha";
   $("#parentFormCancelBtn")?.classList.add("hidden");
@@ -549,6 +569,8 @@ function startEditParentDomain(parent) {
   $("#parentCfToken").placeholder = "Để trống nếu không đổi token";
   $("#parentZoneId").value = parent.cf_zone_id || "";
   $("#parentServerIp").value = parent.server_ip || "";
+  $("#parentCnameTarget").value = parent.cname_target || "";
+  $("#parentCnameTarget").placeholder = defaultCnameTargetForParent(parent.domain);
   $("#parentProxied").value = parent.cf_proxied ? "1" : "0";
   $("#parentFormSummary").textContent = `Sửa domain cha: ${parent.domain}`;
   $("#parentFormSubmitLabel").textContent = "Cập nhật domain cha";
@@ -568,6 +590,7 @@ async function loadParentDomains() {
           (p) => `
       <tr>
         <td><strong>${esc(p.domain)}</strong></td>
+        <td><code>${esc(p.cname_target || defaultCnameTargetForParent(p.domain))}</code></td>
         <td><code>${esc(p.server_ip || "—")}</code></td>
         <td><span class="badge ${p.has_token ? "badge-on" : "badge-off"}">${p.has_token ? "OK" : "Thiếu"}</span></td>
         <td class="domain-actions">
@@ -579,7 +602,7 @@ async function loadParentDomains() {
       </tr>`,
         )
         .join("")
-    : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:24px">Chưa có domain cha. Mở form phía trên để thêm token.</td></tr>`;
+    : `<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:24px">Chưa có domain cha. Mở form phía trên để thêm token.</td></tr>`;
 
   $$("[data-edit-parent]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -591,13 +614,13 @@ async function loadParentDomains() {
   $$("[data-parent-dns]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const domain = btn.dataset.parentDomain;
-      if (!confirm(`Tạo DNS A cho ${domain} bằng token domain cha?`)) return;
+      if (!confirm(`Tạo DNS (CNAME hoặc A) cho ${domain} bằng token domain cha?`)) return;
       try {
-        await api(`/parent-domains/${btn.dataset.parentDns}/dns`, {
+        const result = await api(`/parent-domains/${btn.dataset.parentDns}/dns`, {
           method: "POST",
           body: JSON.stringify({ domain }),
         });
-        toast("Đã cấu hình DNS");
+        toast(formatDnsToast(result));
       } catch (err) {
         alert(err.message);
       }
@@ -633,7 +656,17 @@ async function loadParentDomains() {
 }
 
 async function loadDomains() {
-  const [subdomains] = await Promise.all([api("/subdomains"), loadParentDomains()]);
+  const [subdomains, config] = await Promise.all([
+    api("/subdomains"),
+    loadParentDomains().then(() => api("/config")),
+  ]);
+
+  const hint = $("#serverIpHint");
+  if (hint) {
+    hint.innerHTML = config.publicIp
+      ? `IP public server: <strong>${esc(config.publicIp)}</strong> · <code>${esc(config.baseUrl)}</code>`
+      : "Chưa lấy được IP public server. Nhập IP trong Domain cha hoặc khởi động lại server.";
+  }
 
   $("#subdomainsTableBody").innerHTML = subdomains.length
     ? subdomains
@@ -652,11 +685,11 @@ async function loadDomains() {
           }
         </td>
         <td class="url-cell">
-          <code class="url-code url-copy" data-copy-url="${esc(s.check_url || s.production_url || s.preview_url)}" title="Bấm để copy">${esc(s.check_url || s.production_url || s.preview_url)}</code>
+          <code class="url-code url-copy" data-copy-url="${esc(s.server_check_url || config.baseUrl)}" title="IP public server — bấm để copy">${esc(s.server_check_url || config.baseUrl)}</code>
         </td>
         <td class="domain-actions">
           ${s.site_id ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-site="${s.site_id}">Sửa trang</button>` : ""}
-          <a class="btn btn-ghost btn-sm" href="${esc(s.check_url || s.production_url || s.preview_url)}" target="_blank" rel="noopener">Xem</a>
+          <a class="btn btn-ghost btn-sm" href="${esc(s.preview_url)}" target="_blank" rel="noopener">Xem</a>
           <button type="button" class="btn btn-ghost btn-sm" data-cf-dns="${esc(s.domain)}">DNS</button>
           ${s.site_id ? "" : `<button type="button" class="btn btn-danger btn-sm" data-del-subdomain="${s.id}">Xóa</button>`}
         </td>
@@ -694,10 +727,10 @@ async function loadDomains() {
   $$("[data-cf-dns]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const domain = btn.dataset.cfDns;
-      if (!confirm(`Tạo/cập nhật bản ghi A cho ${domain} trên Cloudflare?`)) return;
+      if (!confirm(`Tạo/cập nhật DNS (CNAME → origin hoặc A) cho ${domain} trên Cloudflare?`)) return;
       try {
-        await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
-        toast("Đã tạo DNS trên Cloudflare");
+        const result = await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
+        toast(formatDnsToast(result));
       } catch (err) {
         alert(err.message);
       }
@@ -1180,10 +1213,10 @@ $("#copyPreviewUrl")?.addEventListener("click", () => {
 
 $("#cfDnsBtn")?.addEventListener("click", async () => {
   const domain = $("#domain").value.trim();
-  if (!domain || !confirm(`Tạo/cập nhật bản ghi A cho ${domain} trên Cloudflare?`)) return;
+  if (!domain || !confirm(`Tạo/cập nhật DNS (CNAME → origin hoặc A) cho ${domain} trên Cloudflare?`)) return;
   try {
-    await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
-    toast("Đã tạo DNS trên Cloudflare");
+    const result = await api("/cloudflare/dns", { method: "POST", body: JSON.stringify({ domain }) });
+    toast(formatDnsToast(result));
   } catch (err) {
     alert(err.message);
   }
@@ -1196,6 +1229,7 @@ $("#parentDomainForm")?.addEventListener("submit", async (e) => {
     domain: $("#parentDomain").value.trim(),
     cf_zone_id: $("#parentZoneId").value.trim(),
     server_ip: $("#parentServerIp").value.trim(),
+    cname_target: $("#parentCnameTarget").value.trim(),
     cf_proxied: $("#parentProxied").value === "1",
   };
   const token = $("#parentCfToken").value.trim();
@@ -1250,7 +1284,7 @@ $("#subdomainForm")?.addEventListener("submit", async (e) => {
     if (result.dns?.error) {
       toast(`Đã tạo subdomain. DNS: ${result.dns.error}`);
     } else {
-      toast("Đã tạo subdomain + DNS");
+      toast(`Đã tạo subdomain + ${formatDnsToast(result.dns)}`);
     }
     await loadDomains();
   } catch (err) {
@@ -1429,5 +1463,10 @@ function initTheme() {
 $("#themeToggle")?.addEventListener("click", toggleTheme);
 $("#loginThemeBtn")?.addEventListener("click", toggleTheme);
 initTheme();
+
+$("#parentDomain")?.addEventListener("input", () => {
+  const target = defaultCnameTargetForParent($("#parentDomain").value);
+  if (target) $("#parentCnameTarget").placeholder = target;
+});
 
 checkAuth();

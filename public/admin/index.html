@@ -190,8 +190,10 @@
                   <i data-lucide="plus"></i> Tạo subdomain + DNS
                 </button>
               </form>
-              <p class="domain-brief-hint">Hệ thống sẽ tự động tạo bản ghi DNS A trên Zone Cloudflare tương ứng trỏ về IP máy chủ.</p>
+              <p class="domain-brief-hint">Subdomain sẽ tạo bản ghi <strong>CNAME</strong> trỏ về hostname origin (mặc định <code>origin.domaincha</code>). Origin nhận bản ghi <strong>A</strong> trỏ về IP server — truy cập URL sẽ hiển thị trang đã cấu hình.</p>
             </div>
+
+            <p id="serverIpHint" class="domain-brief-hint" style="margin:0 0 12px"></p>
             
             <div class="panel table-responsive">
               <table class="sites-table">
@@ -199,7 +201,7 @@
                   <tr>
                     <th>Subdomain</th>
                     <th>Trạng thái</th>
-                    <th>URL kiểm tra</th>
+                    <th>IP server (URL kiểm tra)</th>
                     <th style="text-align: right">Thao tác</th>
                   </tr>
                 </thead>
@@ -229,8 +231,13 @@
                   <input type="text" id="parentZoneId" placeholder="Nhập Cloudflare Zone ID..." required />
                 </div>
                 <div class="form-group">
-                  <label>IP Server máy chủ</label>
+                  <label>IP Server máy chủ (bản ghi A cho origin)</label>
                   <input type="text" id="parentServerIp" placeholder="Ví dụ: 103.82.25.14" required />
+                </div>
+                <div class="form-group">
+                  <label>CNAME đích (hostname origin)</label>
+                  <input type="text" id="parentCnameTarget" placeholder="Mặc định: origin.tenmiencha.com" />
+                  <p class="domain-brief-hint" style="margin-top:6px">Subdomain trỏ CNAME tới hostname này. Origin nhận bản ghi A → IP server ở trên.</p>
                 </div>
                 <div class="form-group">
                   <label>Bật Proxy qua Cloudflare</label>
@@ -253,8 +260,9 @@
                 <thead>
                   <tr>
                     <th>Domain cha</th>
+                    <th>CNAME origin</th>
                     <th>IP Server</th>
-                    <th>Trạng thái Token</th>
+                    <th>Token</th>
                     <th style="text-align: right">Thao tác</th>
                   </tr>
                 </thead>
@@ -309,7 +317,7 @@
                       <code id="productionUrlText">—</code>
                     </div>
                     <button type="button" class="btn btn-ghost btn-sm" id="cfDnsBtn" style="margin-top:12px; display:inline-flex; align-items:center; gap:6px;">
-                      <i data-lucide="cloud-lightning"></i> Cập nhật bản ghi DNS lên Cloudflare
+                      <i data-lucide="cloud-lightning"></i> Cập nhật DNS (CNAME/A) lên Cloudflare
                     </button>
                   </div>
                 </div>
