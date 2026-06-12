@@ -2,6 +2,8 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 const { initDb, seedIfEmpty, seedAdmin } = require("./lib/db");
+const { startPublicIpDetection } = require("./lib/server-ip");
+const { getServerConfig } = require("./lib/urls");
 const publicRoutes = require("./routes/public");
 const adminRoutes = require("./routes/admin");
 
@@ -25,13 +27,18 @@ app.use("/api/admin", adminRoutes);
 app.use("/", publicRoutes);
 
 initDb()
-  .then(() => {
+  .then(async () => {
     seedAdmin();
     seedIfEmpty();
+    await startPublicIpDetection();
 
+    const config = getServerConfig();
     app.listen(PORT, () => {
       console.log(`\n  🛍  LANDING PAGE CMS`);
       console.log(`  Trang web:  http://localhost:${PORT}`);
+      if (config.publicIp) {
+        console.log(`  Server IP:  ${config.publicIp} → ${config.baseUrl}`);
+      }
       console.log(`  Admin:      http://localhost:${PORT}/admin/`);
       console.log(`  SQLite:     data/shop.db`);
       console.log(`  Đăng nhập:  admin / Thuan18092003\n`);

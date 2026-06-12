@@ -243,7 +243,7 @@ function buildOtherSiteOptions(selectedSiteId = "", excludeSiteId = null) {
     '<option value="">— Nhập thủ công / URL riêng —</option>',
     ...sites.map((s) => {
       const label = `${s.domain} — ${s.product_title || s.name || "Trang"}`;
-      const link = s.production_url || s.preview_url || "";
+      const link = s.check_url || s.production_url || s.preview_url || "";
       const thumb = (s.product_images && s.product_images[0]) || "";
       return `<option value="${s.id}" data-url="${esc(link)}" data-name="${esc(s.product_title || s.name || "")}" data-img="${esc(thumb)}" data-tag="${esc(s.tag_hot || "")}"${String(s.id) === String(selectedSiteId) ? " selected" : ""}>${esc(label)}</option>`;
     }),
@@ -284,9 +284,14 @@ function esc(s) {
     .replace(/</g, "&lt;");
 }
 
-function injectPreviewBase(html) {
+function getClientBaseUrl() {
   const port = serverConfig.port || 4433;
-  const base = `http://127.0.0.1:${port}/`;
+  const base = serverConfig.baseUrl || `http://127.0.0.1:${port}`;
+  return base.replace(/\/?$/, "/");
+}
+
+function injectPreviewBase(html) {
+  const base = getClientBaseUrl();
   if (/<base\s/i.test(html)) return html;
   return html.replace(/<head([^>]*)>/i, `<head$1><base href="${base}">`);
 }
@@ -339,8 +344,7 @@ function bindPreviewListeners() {
 
 function buildPreviewUrl(domain) {
   const d = (domain || "").trim().toLowerCase();
-  const port = serverConfig.port || 4433;
-  const base = `http://127.0.0.1:${port}`;
+  const base = getClientBaseUrl().replace(/\/$/, "");
   if (!d || d === "localhost" || d === "127.0.0.1") return `${base}/`;
   return `${base}/?preview=${encodeURIComponent(d)}`;
 }
@@ -648,11 +652,11 @@ async function loadDomains() {
           }
         </td>
         <td class="url-cell">
-          <code class="url-code url-copy" data-copy-url="${esc(s.preview_url)}" title="Bấm để copy">${esc(s.preview_url)}</code>
+          <code class="url-code url-copy" data-copy-url="${esc(s.check_url || s.production_url || s.preview_url)}" title="Bấm để copy">${esc(s.check_url || s.production_url || s.preview_url)}</code>
         </td>
         <td class="domain-actions">
           ${s.site_id ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-site="${s.site_id}">Sửa trang</button>` : ""}
-          <a class="btn btn-ghost btn-sm" href="${esc(s.preview_url)}" target="_blank" rel="noopener">Xem</a>
+          <a class="btn btn-ghost btn-sm" href="${esc(s.check_url || s.production_url || s.preview_url)}" target="_blank" rel="noopener">Xem</a>
           <button type="button" class="btn btn-ghost btn-sm" data-cf-dns="${esc(s.domain)}">DNS</button>
           ${s.site_id ? "" : `<button type="button" class="btn btn-danger btn-sm" data-del-subdomain="${s.id}">Xóa</button>`}
         </td>
@@ -867,9 +871,9 @@ function renderSiteCards() {
         </div>
 
         <div class="site-card-meta">
-          <button type="button" class="site-url-pill url-copy" data-copy-url="${esc(s.preview_url)}" title="Bấm để copy URL">
+          <button type="button" class="site-url-pill url-copy" data-copy-url="${esc(s.check_url || s.production_url || s.preview_url)}" title="Bấm để copy URL">
             <i data-lucide="copy"></i>
-            <span>${esc(s.preview_url)}</span>
+            <span>${esc(s.check_url || s.production_url || s.preview_url)}</span>
           </button>
           <div class="site-visit-pill">
             <i data-lucide="mouse-pointer-click"></i>
@@ -899,7 +903,7 @@ function renderSiteCards() {
           <button type="button" class="btn btn-ghost btn-sm" data-edit="${s.id}">
             <i data-lucide="pencil"></i> Sửa
           </button>
-          <a class="btn btn-ghost btn-sm" href="${esc(s.preview_url)}" target="_blank" rel="noopener">
+          <a class="btn btn-ghost btn-sm" href="${esc(s.check_url || s.production_url || s.preview_url)}" target="_blank" rel="noopener">
             <i data-lucide="external-link"></i> Xem
           </a>
           <button type="button" class="btn btn-danger btn-sm" data-delete-site="${s.id}">
