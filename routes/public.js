@@ -55,8 +55,4 @@ router.get("/", (req, res) => {
   res.render("landing", { site });
 });
 
-router.get("/admin", (_req, res) => {
-  res.redirect("/admin/");
-});
-
 module.exports = router;

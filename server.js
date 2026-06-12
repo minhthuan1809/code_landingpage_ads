@@ -7,24 +7,45 @@ const { getServerConfig } = require("./lib/urls");
 const publicRoutes = require("./routes/public");
 const adminRoutes = require("./routes/admin");
 
-const app = express();
-const PORT = process.env.PORT || 4433;
+const ADMIN_PORT = Number(process.env.ADMIN_PORT) || 4433;
+const LANDING_PORT = Number(process.env.LANDING_PORT) || 4444;
 
-app.set("trust proxy", true);
+function createLandingApp() {
+  const app = express();
+  app.set("trust proxy", true);
+  app.set("view engine", "ejs");
+  app.set("views", path.join(__dirname, "views"));
 
-app.set("view engine", "ejs");
-app.set("views", path.join(__dirname, "views"));
+  app.use(express.json({ limit: "5mb" }));
+  app.use(express.urlencoded({ extended: true }));
 
-app.use(express.json({ limit: "5mb" }));
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+  app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
+  app.use("/css", express.static(path.join(__dirname, "public", "css")));
+  app.use("/", publicRoutes);
 
-app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
-app.use("/css", express.static(path.join(__dirname, "public", "css")));
-app.use("/admin", express.static(path.join(__dirname, "public", "admin")));
+  return app;
+}
 
-app.use("/api/admin", adminRoutes);
-app.use("/", publicRoutes);
+function createAdminApp() {
+  const app = express();
+  app.set("trust proxy", true);
+  app.set("view engine", "ejs");
+  app.set("views", path.join(__dirname, "views"));
+
+  app.use(express.json({ limit: "5mb" }));
+  app.use(express.urlencoded({ extended: true }));
+  app.use(cookieParser());
+
+  app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
+  app.use("/admin", express.static(path.join(__dirname, "public", "admin")));
+  app.use("/api/admin", adminRoutes);
+
+  app.get("/", (_req, res) => {
+    res.redirect("/admin/");
+  });
+
+  return app;
+}
 
 initDb()
   .then(async () => {
@@ -33,13 +54,22 @@ initDb()
     await startPublicIpDetection();
 
     const config = getServerConfig();
-    app.listen(PORT, () => {
-      console.log(`\n  🛍  LANDING PAGE CMS`);
-      console.log(`  Trang web:  http://localhost:${PORT}`);
+    const landingApp = createLandingApp();
+    const adminApp = createAdminApp();
+
+    landingApp.listen(LANDING_PORT, () => {
+      console.log(`  Landing:    http://localhost:${LANDING_PORT}`);
       if (config.publicIp) {
-        console.log(`  Server IP:  ${config.publicIp} → ${config.baseUrl}`);
+        console.log(`              http://${config.publicIp}:${LANDING_PORT}`);
       }
-      console.log(`  Admin:      http://localhost:${PORT}/admin/`);
+    });
+
+    adminApp.listen(ADMIN_PORT, () => {
+      console.log(`\n  🛍  LANDING PAGE CMS`);
+      console.log(`  Admin:      http://localhost:${ADMIN_PORT}/admin/`);
+      if (config.publicIp) {
+        console.log(`              http://${config.publicIp}:${ADMIN_PORT}/admin/`);
+      }
       console.log(`  SQLite:     data/shop.db`);
       console.log(`  Đăng nhập:  admin / Thuan18092003\n`);
     });

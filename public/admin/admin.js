@@ -5,7 +5,7 @@ let productImages = [];
 let detailImages = [];
 let otherProducts = [];
 let editingId = null;
-let serverConfig = { port: 4433 };
+let serverConfig = { adminPort: 4433, landingPort: 4444, baseUrl: "http://127.0.0.1:4444" };
 let siteListCache = [];
 let subdomainListCache = [];
 let authCheckVersion = 0;
@@ -285,8 +285,9 @@ function esc(s) {
 }
 
 function getClientBaseUrl() {
-  const port = serverConfig.port || 4433;
-  const base = serverConfig.baseUrl || `http://127.0.0.1:${port}`;
+  const port = serverConfig.landingPort || serverConfig.port || 4444;
+  const base =
+    serverConfig.landingBaseUrl || serverConfig.baseUrl || `http://127.0.0.1:${port}`;
   return base.replace(/\/?$/, "/");
 }
 
@@ -693,7 +694,7 @@ async function loadDomains() {
   const hint = $("#serverIpHint");
   if (hint) {
     hint.innerHTML = config.publicIp
-      ? `IP public server: <strong>${esc(config.publicIp)}</strong> · <code>${esc(config.baseUrl)}</code>`
+      ? `Landing: <code>${esc(config.landingBaseUrl || config.baseUrl)}</code> · Admin: <code>${esc(config.adminBaseUrl || "")}</code>`
       : "Chưa lấy được IP public server. Nhập IP trong Domain cha hoặc khởi động lại server.";
   }
 
