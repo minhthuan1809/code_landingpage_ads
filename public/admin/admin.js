@@ -87,6 +87,7 @@ function showView(name) {
     b.classList.toggle("active", b.dataset.view === name);
   });
   if (name === "domains") loadDomains();
+  if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
 function switchDomainTab(tab) {
@@ -392,6 +393,7 @@ async function loadParentDomains() {
     });
   });
 
+  if (typeof lucide !== "undefined") lucide.createIcons();
   return parents;
 }
 
@@ -464,6 +466,8 @@ async function loadDomains() {
       }
     });
   });
+
+  if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
 function inlineSubdomainOptions(subdomains, siteId, selectedId) {
@@ -590,6 +594,8 @@ async function loadSites() {
       }
     });
   });
+
+  if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
 async function uploadFiles(files) {
@@ -623,6 +629,7 @@ function showApp(loggedIn) {
   $("#loginView").style.display = loggedIn ? "none" : "flex";
   $("#loginThemeBtn").style.display = loggedIn ? "none" : "flex";
   $("#app").classList.toggle("is-open", loggedIn);
+  if (typeof lucide !== "undefined") lucide.createIcons();
 }
 
 async function checkAuth() {

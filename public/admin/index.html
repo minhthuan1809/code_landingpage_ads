@@ -4,9 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin - NARA Shop CMS</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" />
     <link rel="stylesheet" href="admin.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script>
       (function () {
         var t = localStorage.getItem("admin-theme") || "dark";
@@ -15,65 +16,116 @@
     </script>
   </head>
   <body>
+    <!-- Floating Light/Dark Mode toggle on Login Page -->
     <button type="button" class="theme-toggle login-theme" id="loginThemeBtn" aria-label="Đổi giao diện">
-      <span id="loginThemeLabel">Giao diện sáng</span>
       <span class="theme-toggle-icon" id="loginThemeIcon">☀️</span>
+      <span id="loginThemeLabel">Giao diện sáng</span>
     </button>
+
+    <!-- Login Container -->
     <div id="loginView" class="login-wrap">
       <div class="login-box">
-        <h1>NARA Shop CMS</h1>
-        <p>Quản lý trang bán hàng theo domain</p>
+        <div class="login-header">
+          <div class="login-logo"><i data-lucide="shopping-bag"></i></div>
+          <h1>NARA Shop CMS</h1>
+          <p>Hệ thống quản lý landing page multi-domain</p>
+        </div>
         <form id="loginForm">
           <div class="form-group">
             <label>Tài khoản</label>
-            <input type="text" id="username" name="username" value="admin" required autocomplete="username" />
+            <div class="input-icon-wrap">
+              <i data-lucide="user"></i>
+              <input type="text" id="username" value="admin" required placeholder="Nhập tài khoản..." />
+            </div>
           </div>
           <div class="form-group">
             <label>Mật khẩu</label>
-            <input type="password" id="password" required autocomplete="current-password" />
+            <div class="input-icon-wrap">
+              <i data-lucide="lock"></i>
+              <input type="password" id="password" required autocomplete="current-password" placeholder="Nhập mật khẩu..." />
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">Đăng nhập</button>
+          <button type="submit" class="btn btn-primary" style="width:100%; margin-top:16px;">
+            <span>Đăng nhập</span>
+            <i data-lucide="arrow-right"></i>
+          </button>
         </form>
-        <p id="loginError" style="color:var(--red);font-size:13px;margin-top:12px;display:none"></p>
+        <p id="loginError" style="color:var(--red); font-size:13px; margin-top:16px; text-align:center; display:none"></p>
       </div>
     </div>
 
+    <!-- Main Workspace -->
     <div id="app" class="app">
       <aside class="sidebar">
-        <h2>NARA CMS</h2>
-        <p class="sub">Quản trị multi-domain</p>
-        <button class="nav-btn active" data-view="list">Danh sách trang</button>
-        <button class="nav-btn" data-view="domains">Quản lý domain</button>
-        <button type="button" class="theme-toggle" id="themeToggle" style="margin-top:16px">
-          <span id="themeLabel">Giao diện sáng</span>
-          <span class="theme-toggle-icon" id="themeIcon">☀️</span>
-        </button>
-        <button class="nav-btn" id="logoutBtn" style="margin-top:12px;color:var(--red)">Đăng xuất</button>
+        <div class="sidebar-brand">
+          <div class="brand-logo"><i data-lucide="shopping-bag"></i></div>
+          <div>
+            <h2>NARA Shop</h2>
+            <p class="sub">Quản trị multi-domain</p>
+          </div>
+        </div>
+        
+        <nav class="nav-menu">
+          <button class="nav-btn active" data-view="list">
+            <i data-lucide="layers"></i>
+            <span>Danh sách trang</span>
+          </button>
+          <button class="nav-btn" data-view="domains">
+            <i data-lucide="globe"></i>
+            <span>Quản lý domain</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button type="button" class="theme-toggle" id="themeToggle">
+            <span class="theme-toggle-icon" id="themeIcon">☀️</span>
+            <span id="themeLabel">Giao diện sáng</span>
+          </button>
+          <button class="nav-btn logout-btn" id="logoutBtn">
+            <i data-lucide="log-out"></i>
+            <span>Đăng xuất</span>
+          </button>
+        </div>
       </aside>
 
       <main class="main">
+        <!-- Site Listing View -->
         <div id="listView">
           <div class="topbar">
-            <h1>Danh sách trang web</h1>
+            <div class="topbar-title">
+              <h1>Danh sách trang web</h1>
+              <p class="topbar-subtitle">Gán và quản lý landing page bán hàng theo các tên miền khác nhau</p>
+            </div>
             <div class="topbar-actions">
-              <button class="btn btn-ghost" id="exportSitesBtn" type="button">Xuất URL</button>
-              <button class="btn btn-primary" id="addSiteBtn" type="button">+ Thêm domain mới</button>
+              <button class="btn btn-ghost" id="exportSitesBtn" type="button">
+                <i data-lucide="download"></i>
+                <span>Xuất URL</span>
+              </button>
+              <button class="btn btn-primary" id="addSiteBtn" type="button">
+                <i data-lucide="plus"></i>
+                <span>Thêm domain mới</span>
+              </button>
             </div>
           </div>
+          
           <div class="domain-hint-box">
-            <strong>Domain = trang web</strong>
-            Gán subdomain hoặc nhập domain ngay tại cột Domain. Tạo subdomain mới tại <em>Quản lý domain</em>.
+            <div class="hint-title">
+              <i data-lucide="info"></i>
+              <strong>Hướng dẫn gán tên miền</strong>
+            </div>
+            <p>Mỗi tên miền / subdomain tương đương với một trang web bán hàng riêng. Bạn có thể tạo subdomain tại tab <strong>Quản lý domain</strong> rồi gắn trang cho nó tại đây.</p>
           </div>
-          <div class="panel">
+
+          <div class="panel table-responsive">
             <table class="sites-table">
               <thead>
                 <tr>
                   <th>Domain</th>
                   <th>URL truy cập</th>
-                  <th>Tên</th>
-                  <th>Lượt truy cập (IP/ngày)</th>
+                  <th>Tên quản lý</th>
+                  <th>Lượt truy cập</th>
                   <th>Trạng thái</th>
-                  <th>Thao tác</th>
+                  <th style="text-align: right">Thao tác</th>
                 </tr>
               </thead>
               <tbody id="sitesTableBody"></tbody>
@@ -81,17 +133,30 @@
           </div>
         </div>
 
+        <!-- Domains Management View -->
         <div id="domainsView" class="hidden">
           <div class="topbar domain-topbar">
-            <h1>Quản lý domain</h1>
+            <div class="topbar-title">
+              <h1>Quản lý Domain</h1>
+              <p class="topbar-subtitle">Cấu hình API Cloudflare và quản lý DNS cho các domain phụ tự động</p>
+            </div>
             <div class="domain-tabs">
-              <button type="button" class="domain-tab active" data-domain-tab="children">Subdomain</button>
-              <button type="button" class="domain-tab" data-domain-tab="parents">Domain cha (API)</button>
+              <button type="button" class="domain-tab active" data-domain-tab="children">
+                <i data-lucide="network"></i> Subdomain
+              </button>
+              <button type="button" class="domain-tab" data-domain-tab="parents">
+                <i data-lucide="key-round"></i> Domain cha (Cloudflare)
+              </button>
             </div>
           </div>
 
+          <!-- Subdomains Panel -->
           <div id="domainChildrenPanel">
             <div class="panel domain-quick-bar">
+              <div class="panel-header-simple">
+                <i data-lucide="plus-circle" style="color:var(--brand)"></i>
+                <h3>Tạo Subdomain mới</h3>
+              </div>
               <form id="subdomainForm" class="domain-quick-form">
                 <div class="form-group">
                   <label>Domain cha</label>
@@ -100,21 +165,24 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>Subdomain</label>
-                  <input type="text" id="childSubdomain" placeholder="abc" required />
+                  <label>Subdomain (tên miền con)</label>
+                  <input type="text" id="childSubdomain" placeholder="Ví dụ: khuyenmai, shop, order" required />
                 </div>
-                <button type="submit" class="btn btn-primary">Tạo subdomain + DNS</button>
+                <button type="submit" class="btn btn-primary">
+                  <i data-lucide="plus"></i> Tạo subdomain + DNS
+                </button>
               </form>
-              <p class="domain-brief-hint">Chỉ tạo tên miền con và DNS — chưa gắn trang. Khi tạo/sửa trang, chọn subdomain ở form bên dưới.</p>
+              <p class="domain-brief-hint">Hệ thống sẽ tự động tạo bản ghi DNS A trên Zone Cloudflare tương ứng trỏ về IP máy chủ.</p>
             </div>
-            <div class="panel">
+            
+            <div class="panel table-responsive">
               <table class="sites-table">
                 <thead>
                   <tr>
                     <th>Subdomain</th>
                     <th>Trạng thái</th>
-                    <th>URL test</th>
-                    <th></th>
+                    <th>URL kiểm tra</th>
+                    <th style="text-align: right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody id="subdomainsTableBody"></tbody>
@@ -122,46 +190,52 @@
             </div>
           </div>
 
+          <!-- CF Domain Parents Panel -->
           <div id="domainParentsPanel" class="hidden">
             <details class="panel domain-details">
-              <summary class="domain-details-summary">+ Thêm domain cha (Cloudflare Token)</summary>
-              <form id="parentDomainForm" class="form-grid domain-form-grid" style="margin-top:16px">
+              <summary class="domain-details-summary">
+                <i data-lucide="plus-circle"></i> <span>Thêm Domain Cha mới (Cấu hình API Cloudflare)</span>
+              </summary>
+              <form id="parentDomainForm" class="form-grid domain-form-grid" style="margin-top:20px">
                 <div class="form-group">
-                  <label>Domain *</label>
-                  <input type="text" id="parentDomain" placeholder="minhthuan.shop" required />
+                  <label>Tên miền chính (Domain)</label>
+                  <input type="text" id="parentDomain" placeholder="Ví dụ: shopcuatoi.club" required />
                 </div>
                 <div class="form-group">
-                  <label>API Token *</label>
-                  <input type="password" id="parentCfToken" placeholder="Zone.DNS Edit" required autocomplete="off" />
+                  <label>Cloudflare API Token</label>
+                  <input type="password" id="parentCfToken" placeholder="Nhập Zone.DNS Edit API Token..." required autocomplete="off" />
                 </div>
                 <div class="form-group">
-                  <label>Zone ID *</label>
-                  <input type="text" id="parentZoneId" required />
+                  <label>Cloudflare Zone ID</label>
+                  <input type="text" id="parentZoneId" placeholder="Nhập Cloudflare Zone ID..." required />
                 </div>
                 <div class="form-group">
-                  <label>IP server *</label>
-                  <input type="text" id="parentServerIp" placeholder="203.0.113.10" required />
+                  <label>IP Server máy chủ</label>
+                  <input type="text" id="parentServerIp" placeholder="Ví dụ: 103.82.25.14" required />
                 </div>
                 <div class="form-group">
-                  <label>Proxy</label>
+                  <label>Bật Proxy qua Cloudflare</label>
                   <select id="parentProxied">
-                    <option value="1">Bật</option>
-                    <option value="0">Tắt</option>
+                    <option value="1">Bật Cloudflare Proxy (Đám mây vàng)</option>
+                    <option value="0">Tắt Cloudflare Proxy (Đám mây xám - DNS Only)</option>
                   </select>
                 </div>
-                <div class="form-group full">
-                  <button type="submit" class="btn btn-primary">Lưu</button>
+                <div class="form-group full" style="margin-bottom:0">
+                  <button type="submit" class="btn btn-primary">
+                    <i data-lucide="save"></i> Lưu domain cha
+                  </button>
                 </div>
               </form>
             </details>
-            <div class="panel" style="margin-top:16px">
+            
+            <div class="panel table-responsive" style="margin-top:20px">
               <table class="sites-table">
                 <thead>
                   <tr>
                     <th>Domain cha</th>
-                    <th>IP</th>
-                    <th>Token</th>
-                    <th></th>
+                    <th>IP Server</th>
+                    <th>Trạng thái Token</th>
+                    <th style="text-align: right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody id="parentDomainsTableBody"></tbody>
@@ -170,152 +244,226 @@
           </div>
         </div>
 
+        <!-- Add/Edit Web Site View -->
         <div id="editView" class="hidden">
           <div class="topbar">
-            <h1 id="editTitle">Thêm trang mới</h1>
+            <div class="topbar-title">
+              <h1 id="editTitle">Thêm trang mới</h1>
+              <p class="topbar-subtitle">Thiết kế, nhập thông tin sản phẩm và nội dung hiển thị cho trang bán hàng</p>
+            </div>
           </div>
-          <form id="siteForm" class="panel">
+
+          <form id="siteForm" class="panel site-form-panel">
             <input type="hidden" id="siteId" />
 
-            <div class="form-grid">
-              <div class="form-group full">
-                <label>Subdomain có sẵn</label>
-                <select id="subdomainPick">
-                  <option value="">— Nhập domain thủ công —</option>
-                </select>
-                <p class="domain-hint">Chọn subdomain đã tạo ở Quản lý domain, hoặc nhập domain thủ công bên dưới.</p>
+            <div class="form-section">
+              <div class="form-section-title">
+                <i data-lucide="globe"></i>
+                <h2>Cấu hình tên miền truy cập</h2>
               </div>
-              <div class="form-group full" id="manualDomainGroup">
-                <label>Domain *</label>
-                <input type="text" id="domain" placeholder="shopcuatoi.com hoặc localhost" required />
-                <p class="domain-hint">
-                  Nhập đúng tên miền khi khách truy cập (không có http/https, không www).
-                  Ví dụ: <code>shopcuatoi.com</code>. Test máy: <code>localhost</code>.
-                </p>
-                <div class="url-preview-box" id="domainUrlPreview">
-                  <div><span class="url-label">Xem trên máy:</span> <code id="previewUrlText">—</code>
-                    <button type="button" class="btn btn-ghost btn-sm" id="copyPreviewUrl">Copy</button>
-                    <a class="btn btn-ghost btn-sm" id="openPreviewUrl" href="#" target="_blank" rel="noopener">Mở</a>
-                  </div>
-                  <div><span class="url-label">Production:</span> <code id="productionUrlText">—</code></div>
-                  <button type="button" class="btn btn-ghost btn-sm" id="cfDnsBtn" style="margin-top:8px">Tạo DNS trên Cloudflare</button>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label>Chọn Subdomain đã tạo</label>
+                  <select id="subdomainPick">
+                    <option value="">— Nhập domain thủ công bên dưới —</option>
+                  </select>
                 </div>
-              </div>
-              <div class="form-group">
-                <label>Tên quản lý</label>
-                <input type="text" id="name" placeholder="Shop ABC" />
-              </div>
-              <div class="form-group full">
-                <label>Tiêu đề trang (title)</label>
-                <input type="text" id="page_title" />
-              </div>
-
-              <div class="form-group">
-                <label>Logo chính</label>
-                <input type="text" id="shop_logo_main" value="NARA" />
-              </div>
-              <div class="form-group">
-                <label>Logo phụ</label>
-                <input type="text" id="shop_logo_accent" value="Shop" />
-              </div>
-              <div class="form-group">
-                <label>Badge header</label>
-                <input type="text" id="shop_badge" value="✓ Chính hãng" />
-              </div>
-              <div class="form-group">
-                <label>Link Messenger / Mua hàng</label>
-                <input type="url" id="messenger_url" placeholder="https://m.me/..." />
-              </div>
-
-              <div class="form-group">
-                <label>Tag mới</label>
-                <input type="text" id="tag_new" value="New 2026" />
-              </div>
-              <div class="form-group">
-                <label>Tag hot</label>
-                <input type="text" id="tag_hot" value="Bán chạy" />
-              </div>
-              <div class="form-group full">
-                <label>Tên sản phẩm</label>
-                <input type="text" id="product_title" />
-              </div>
-
-              <div class="form-group">
-                <label>Avatar shop</label>
-                <input type="text" id="seller_avatar" maxlength="2" value="N" />
-              </div>
-              <div class="form-group">
-                <label>Tên shop</label>
-                <input type="text" id="seller_name" />
-              </div>
-              <div class="form-group">
-                <label>Meta shop</label>
-                <input type="text" id="seller_meta" placeholder="65K đã bán · ..." />
-              </div>
-              <div class="form-group">
-                <label>Badge uy tín</label>
-                <input type="text" id="seller_verified" value="Uy tín" />
-              </div>
-              <div class="form-group">
-                <label>Chip thống kê 1</label>
-                <input type="text" id="stat_chip_1" value="Giao hàng toàn quốc" />
-              </div>
-              <div class="form-group">
-                <label>Chip thống kê 2</label>
-                <input type="text" id="stat_chip_2" value="Miễn phí vận chuyển" />
-              </div>
-
-              <div class="form-group full">
-                <label>Tiêu đề mô tả</label>
-                <input type="text" id="detail_title" />
-              </div>
-              <div class="form-group full">
-                <label>Nội dung mô tả (Text Editor)</label>
-                <div class="editor-wrap"><div id="detailEditor"></div></div>
-              </div>
-              <div class="form-group full">
-                <label>Ảnh mô tả sản phẩm</label>
-                <input type="file" id="detailUpload" accept="image/*" multiple />
-                <div class="img-list" id="detailImages"></div>
-              </div>
-
-              <div class="form-group">
-                <label>Màu thương hiệu</label>
-                <input type="color" id="brand_color" value="#8b5a2b" />
-              </div>
-              <div class="form-group">
-                <label>Màu nút mua</label>
-                <input type="color" id="accent_color" value="#1a1a1a" />
-              </div>
-              <div class="form-group">
-                <label>Lượt truy cập (mỗi IP tính 1 lần/ngày)</label>
-                <input type="text" id="visit_count" readonly value="0" />
-              </div>
-              <div class="form-group">
-                <label>Trạng thái</label>
-                <select id="active">
-                  <option value="1">Đang hoạt động</option>
-                  <option value="0">Tắt</option>
-                </select>
-              </div>
-
-              <div class="form-group full">
-                <label>Ảnh slide (carousel đầu trang)</label>
-                <input type="file" id="productUpload" accept="image/*" multiple />
-                <div class="img-list" id="productImages"></div>
-              </div>
-
-              <div class="form-group full">
-                <label>Sản phẩm khác</label>
-                <div id="otherProducts"></div>
-                <button type="button" class="btn btn-ghost btn-sm" id="addOtherBtn" style="margin-top:8px">+ Thêm sản phẩm</button>
+                <div class="form-group full" id="manualDomainGroup">
+                  <label>Nhập tên miền (Domain)</label>
+                  <input type="text" id="domain" placeholder="Ví dụ: shopcuatoi.com hoặc localhost" required />
+                  <p class="domain-hint">Không nhập tiền tố http/https hay www. Ví dụ: shopcuatoi.com. Khi test trên máy tính, sử dụng: <code>localhost</code>.</p>
+                  
+                  <div class="url-preview-box" id="domainUrlPreview">
+                    <div class="url-preview-line">
+                      <span class="url-label">Đường dẫn Local:</span>
+                      <code id="previewUrlText">—</code>
+                      <div class="url-preview-actions">
+                        <button type="button" class="btn btn-ghost btn-sm" id="copyPreviewUrl">Copy</button>
+                        <a class="btn btn-ghost btn-sm" id="openPreviewUrl" href="#" target="_blank" rel="noopener">Mở</a>
+                      </div>
+                    </div>
+                    <div class="url-preview-line">
+                      <span class="url-label">Đường dẫn thực tế:</span>
+                      <code id="productionUrlText">—</code>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm" id="cfDnsBtn" style="margin-top:12px; display:inline-flex; align-items:center; gap:6px;">
+                      <i data-lucide="cloud-lightning"></i> Cập nhật bản ghi DNS lên Cloudflare
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="btn-row">
-              <button type="submit" class="btn btn-primary">Lưu trang</button>
-              <button type="button" class="btn btn-ghost" id="cancelBtn">Hủy</button>
-              <button type="button" class="btn btn-danger hidden" id="deleteBtn">Xóa trang</button>
+            <div class="form-section" style="margin-top:28px">
+              <div class="form-section-title">
+                <i data-lucide="settings"></i>
+                <h2>Thông tin cơ bản Landing Page</h2>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Tên quản lý nội bộ</label>
+                  <input type="text" id="name" placeholder="Ví dụ: Shop Giày Nike VIP" />
+                </div>
+                <div class="form-group">
+                  <label>Tiêu đề tab trình duyệt (page title)</label>
+                  <input type="text" id="page_title" placeholder="Ví dụ: Mua Ngay Giày Thể Thao Nam Cao Cấp" />
+                </div>
+                <div class="form-group">
+                  <label>Logo chính (Logo Main)</label>
+                  <input type="text" id="shop_logo_main" value="NARA" placeholder="Ví dụ: NARA" />
+                </div>
+                <div class="form-group">
+                  <label>Logo phụ (Logo Accent)</label>
+                  <input type="text" id="shop_logo_accent" value="Shop" placeholder="Ví dụ: Shop" />
+                </div>
+                <div class="form-group">
+                  <label>Thông báo đầu trang (Badge header)</label>
+                  <input type="text" id="shop_badge" value="✓ Chính hãng" />
+                </div>
+                <div class="form-group">
+                  <label>Đường dẫn mua hàng (Messenger / Form Link)</label>
+                  <input type="url" id="messenger_url" placeholder="https://m.me/trangcuaban..." />
+                </div>
+                <div class="form-group">
+                  <label>Nhãn nổi bật 1 (Tag new)</label>
+                  <input type="text" id="tag_new" value="New 2026" />
+                </div>
+                <div class="form-group">
+                  <label>Nhãn nổi bật 2 (Tag hot)</label>
+                  <input type="text" id="tag_hot" value="Bán chạy" />
+                </div>
+                <div class="form-group full">
+                  <label>Tên sản phẩm hiển thị lớn</label>
+                  <input type="text" id="product_title" placeholder="Nhập tên sản phẩm..." />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section" style="margin-top:28px">
+              <div class="form-section-title">
+                <i data-lucide="check-circle2"></i>
+                <h2>Thông tin Shop & Cam kết</h2>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Avatar Shop (1-2 chữ cái)</label>
+                  <input type="text" id="seller_avatar" maxlength="2" value="N" />
+                </div>
+                <div class="form-group">
+                  <label>Tên Shop bán hàng</label>
+                  <input type="text" id="seller_name" placeholder="Ví dụ: NARA Official Store" />
+                </div>
+                <div class="form-group">
+                  <label>Thông tin thống kê phụ (Meta shop)</label>
+                  <input type="text" id="seller_meta" placeholder="Ví dụ: 65K đã bán · Phản hồi 99%" />
+                </div>
+                <div class="form-group">
+                  <label>Nhãn uy tín (Badge uy tín)</label>
+                  <input type="text" id="seller_verified" value="Uy tín" />
+                </div>
+                <div class="form-group">
+                  <label>Chip thống kê cam kết 1</label>
+                  <input type="text" id="stat_chip_1" value="Giao hàng toàn quốc" />
+                </div>
+                <div class="form-group">
+                  <label>Chip thống kê cam kết 2</label>
+                  <input type="text" id="stat_chip_2" value="Miễn phí vận chuyển" />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section" style="margin-top:28px">
+              <div class="form-section-title">
+                <i data-lucide="file-text"></i>
+                <h2>Nội dung mô tả sản phẩm</h2>
+              </div>
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label>Tiêu đề tiêu điểm mô tả</label>
+                  <input type="text" id="detail_title" placeholder="Ví dụ: Ưu điểm nổi bật của sản phẩm..." />
+                </div>
+                <div class="form-group full">
+                  <label>Chi tiết mô tả sản phẩm (Soạn thảo văn bản)</label>
+                  <div class="editor-wrap">
+                    <div id="detailEditor"></div>
+                  </div>
+                </div>
+                <div class="form-group full">
+                  <label>Ảnh chi tiết sản phẩm (Hiển thị dọc cuối mô tả)</label>
+                  <div class="upload-zone">
+                    <i data-lucide="image"></i>
+                    <span>Bấm hoặc thả ảnh vào đây để tải lên</span>
+                    <input type="file" id="detailUpload" accept="image/*" multiple />
+                  </div>
+                  <div class="img-list" id="detailImages"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section" style="margin-top:28px">
+              <div class="form-section-title">
+                <i data-lucide="palette"></i>
+                <h2>Giao diện & Slider</h2>
+              </div>
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Màu sắc thương hiệu chính (Brand Color)</label>
+                  <div class="color-picker-wrap">
+                    <input type="color" id="brand_color" value="#8b5a2b" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Màu sắc nút mua hàng (CTA Color)</label>
+                  <div class="color-picker-wrap">
+                    <input type="color" id="accent_color" value="#1a1a1a" />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>Lượt truy cập (tích lũy)</label>
+                  <input type="text" id="visit_count" readonly value="0" style="opacity:0.7; cursor:not-allowed;" />
+                </div>
+                <div class="form-group">
+                  <label>Trạng thái hoạt động</label>
+                  <select id="active">
+                    <option value="1">Đang hoạt động</option>
+                    <option value="0">Tạm tắt (Bảo trì)</option>
+                  </select>
+                </div>
+                <div class="form-group full">
+                  <label>Ảnh Slider Carousel (Các hình ảnh chạy trên cùng trang)</label>
+                  <div class="upload-zone">
+                    <i data-lucide="images"></i>
+                    <span>Bấm hoặc thả ảnh slider sản phẩm vào đây</span>
+                    <input type="file" id="productUpload" accept="image/*" multiple />
+                  </div>
+                  <div class="img-list" id="productImages"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section" style="margin-top:28px">
+              <div class="form-section-title">
+                <i data-lucide="shopping-cart"></i>
+                <h2>Các sản phẩm khác bán kèm (Grid bên dưới)</h2>
+              </div>
+              <div class="form-grid">
+                <div class="form-group full" style="margin-bottom:0">
+                  <div id="otherProducts"></div>
+                  <button type="button" class="btn btn-ghost btn-sm" id="addOtherBtn" style="margin-top:12px; display:inline-flex; align-items:center; gap:6px;">
+                    <i data-lucide="plus"></i> Thêm sản phẩm bán kèm
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-row" style="margin-top:36px; padding-top:24px; border-top:1px solid var(--border)">
+              <button type="submit" class="btn btn-primary">
+                <i data-lucide="save"></i> Lưu cấu hình trang
+              </button>
+              <button type="button" class="btn btn-ghost" id="cancelBtn">Quay lại</button>
+              <button type="button" class="btn btn-danger hidden" id="deleteBtn">
+                <i data-lucide="trash-2"></i> Xóa trang web
+              </button>
             </div>
           </form>
         </div>

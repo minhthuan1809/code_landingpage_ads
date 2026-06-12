@@ -4,10 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
     <title><%= site.page_title %></title>
+    <meta name="description" content="Mua ngay <%= site.product_title %> chính hãng từ <%= site.seller_name %>. <%= site.detail_title || '' %>" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="product" />
+    <meta property="og:title" content="<%= site.page_title %>" />
+    <meta property="og:description" content="Mua ngay <%= site.product_title %> chính hãng từ <%= site.seller_name %>. <%= site.detail_title || '' %>" />
+    <% if (site.product_images.length > 0) { %>
+    <meta property="og:image" content="<%= site.product_images[0] %>" />
+    <% } %>
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://<%= site.domain %>/" />
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" />
     <link rel="stylesheet" href="/css/landing.css" />
-    <style>:root { --brand: <%= site.brand_color %>; --accent: <%= site.accent_color %>; }</style>
+    <%
+      function hexToRgb(hex) {
+        var c = String(hex || '').replace('#', '');
+        if (c.length === 3) {
+          c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+        }
+        var num = parseInt(c, 16);
+        if (isNaN(num)) return "139, 90, 43";
+        return ((num >> 16) & 255) + ", " + ((num >> 8) & 255) + ", " + (num & 255);
+      }
+      var brandRgb = hexToRgb(site.brand_color);
+    %>
+    <style>:root { --brand: <%= site.brand_color %>; --brand-rgb: <%= brandRgb %>; --accent: <%= site.accent_color %>; }</style>
   </head>
   <body>
     <% if (site.product_images.length > 0) { %>
