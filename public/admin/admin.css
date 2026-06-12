@@ -924,11 +924,26 @@ input[type="color"]::-webkit-color-swatch {
 }
 
 .editor-wrap .ql-editor {
-  min-height: 180px;
+  min-height: 260px;
   font-size: 14px;
   line-height: 1.6;
   color: var(--editor-text);
   padding: 16px;
+}
+
+.editor-wrap .ql-editor img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 10px auto;
+  border-radius: 10px;
+}
+
+.field-hint {
+  margin: -4px 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
 [data-theme="dark"] .ql-snow .ql-stroke {
@@ -1453,6 +1468,11 @@ input[type="color"]::-webkit-color-swatch {
 
 .parent-main-row td:first-child strong {
   color: var(--brand);
+}
+
+.parent-row-highlight td {
+  background: rgba(139, 90, 43, 0.12);
+  transition: background 0.3s ease;
 }
 
 .domain-details {

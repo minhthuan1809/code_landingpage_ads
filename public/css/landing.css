@@ -359,6 +359,15 @@ body {
   margin-bottom: 0;
 }
 
+.rich-text img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  margin: 14px auto;
+  border-radius: 12px;
+}
+
 .rich-heading {
   font-size: 12px;
   font-weight: 800;
