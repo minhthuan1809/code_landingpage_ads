@@ -168,6 +168,8 @@
             </div>
           </div>
 
+          <p id="primaryOriginHint" class="domain-brief-hint domain-origin-banner" style="margin:0 0 16px"></p>
+
           <!-- Subdomains Panel -->
           <div id="domainChildrenPanel">
             <div class="panel domain-quick-bar">
@@ -190,7 +192,7 @@
                   <i data-lucide="plus"></i> Tạo subdomain + DNS
                 </button>
               </form>
-              <p class="domain-brief-hint">Subdomain sẽ tạo bản ghi <strong>CNAME</strong> trỏ về hostname origin (mặc định <code>origin.domaincha</code>). Origin nhận bản ghi <strong>A</strong> trỏ về IP server — truy cập URL sẽ hiển thị trang đã cấu hình.</p>
+              <p class="domain-brief-hint">Subdomain tạo bản ghi <strong>CNAME</strong> trỏ về origin của <strong>domain cha chính</strong> (tab Domain cha → bấm <strong>Đặt chính</strong>).</p>
             </div>
 
             <p id="serverIpHint" class="domain-brief-hint" style="margin:0 0 12px"></p>
@@ -235,11 +237,6 @@
                   <input type="text" id="parentServerIp" placeholder="Ví dụ: 103.82.25.14" required />
                 </div>
                 <div class="form-group">
-                  <label>CNAME đích (hostname origin)</label>
-                  <input type="text" id="parentCnameTarget" placeholder="Mặc định: origin.tenmiencha.com" />
-                  <p class="domain-brief-hint" style="margin-top:6px">Subdomain trỏ CNAME tới hostname này. Origin nhận bản ghi A → IP server ở trên.</p>
-                </div>
-                <div class="form-group">
                   <label>Bật Proxy qua Cloudflare</label>
                   <select id="parentProxied">
                     <option value="1">Bật Cloudflare Proxy (Đám mây vàng)</option>
@@ -260,7 +257,7 @@
                 <thead>
                   <tr>
                     <th>Domain cha</th>
-                    <th>CNAME origin</th>
+                    <th>Origin (CNAME đích)</th>
                     <th>IP Server</th>
                     <th>Token</th>
                     <th style="text-align: right">Thao tác</th>

@@ -1326,6 +1326,17 @@ input[type="color"]::-webkit-color-swatch {
   font-size: 11px;
 }
 
+.domain-origin-banner {
+  padding: 12px 14px;
+  background: var(--surface2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.parent-main-row td:first-child strong {
+  color: var(--brand);
+}
+
 .domain-details {
   padding: 20px;
 }

@@ -22,6 +22,9 @@ const {
   getRefreshTokenRow,
   deleteRefreshToken,
   getCloudflareSettings,
+  getPrimaryOriginDomain,
+  getMainParentDomain,
+  setMainParentDomain,
 } = require("../lib/db");
 const { getServerConfig, exportSites, buildSiteUrls } = require("../lib/urls");
 const { verifyToken } = require("../lib/cloudflare");
@@ -126,12 +129,27 @@ router.get("/config", requireAuth, (_req, res) => {
   const cf = getCloudflareSettings();
   res.json({
     ...config,
+    primary_origin_domain: getPrimaryOriginDomain(),
+    main_parent_domain: getMainParentDomain()?.domain || "",
     cloudflare: {
       configured: Boolean(cf.api_token && cf.zone_id),
       has_public_ip: Boolean(cf.public_ip),
       proxied: cf.proxied,
     },
   });
+});
+
+router.post("/parent-domains/:id/set-main", requireAuth, (req, res) => {
+  try {
+    const result = setMainParentDomain(Number(req.params.id));
+    res.json({
+      ok: true,
+      parent: result,
+      primary_origin_domain: result.primary_origin_domain,
+    });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 router.get("/sites/export", requireAuth, (_req, res) => {
@@ -179,7 +197,6 @@ router.post("/parent-domains", requireAuth, (req, res) => {
       cf_api_token: req.body.cf_api_token,
       cf_zone_id: req.body.cf_zone_id,
       server_ip: req.body.server_ip,
-      cname_target: req.body.cname_target,
       cf_proxied: req.body.cf_proxied !== false,
       note: req.body.note,
       active: req.body.active !== false,
@@ -198,7 +215,6 @@ router.put("/parent-domains/:id", requireAuth, (req, res) => {
       cf_api_token: req.body.cf_api_token,
       cf_zone_id: req.body.cf_zone_id,
       server_ip: req.body.server_ip,
-      cname_target: req.body.cname_target,
       cf_proxied: req.body.cf_proxied,
       note: req.body.note,
       active: req.body.active,

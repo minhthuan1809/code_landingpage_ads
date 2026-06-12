@@ -531,16 +531,6 @@ function renderParentOptions(parents, selectedId = "") {
   ].join("");
 }
 
-function defaultCnameTargetForParent(domain) {
-  const normalized = String(domain || "")
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .split("/")[0]
-    .replace(/\.$/, "");
-  return normalized ? `origin.${normalized}` : "";
-}
-
 function formatDnsToast(result) {
   if (!result) return "Đã cấu hình DNS";
   if (result.recordType === "CNAME") {
@@ -555,7 +545,6 @@ function resetParentDomainForm() {
   $("#parentDomainForm").reset();
   $("#parentCfToken").required = true;
   $("#parentCfToken").placeholder = "Nhập Zone.DNS Edit API Token...";
-  $("#parentCnameTarget").placeholder = "Mặc định: origin.tenmiencha.com";
   $("#parentFormSummary").textContent = "Thêm Domain Cha mới (Cấu hình API Cloudflare)";
   $("#parentFormSubmitLabel").textContent = "Lưu domain cha";
   $("#parentFormCancelBtn")?.classList.add("hidden");
@@ -569,8 +558,6 @@ function startEditParentDomain(parent) {
   $("#parentCfToken").placeholder = "Để trống nếu không đổi token";
   $("#parentZoneId").value = parent.cf_zone_id || "";
   $("#parentServerIp").value = parent.server_ip || "";
-  $("#parentCnameTarget").value = parent.cname_target || "";
-  $("#parentCnameTarget").placeholder = defaultCnameTargetForParent(parent.domain);
   $("#parentProxied").value = parent.cf_proxied ? "1" : "0";
   $("#parentFormSummary").textContent = `Sửa domain cha: ${parent.domain}`;
   $("#parentFormSubmitLabel").textContent = "Cập nhật domain cha";
@@ -584,25 +571,60 @@ async function loadParentDomains() {
   const parents = await api("/parent-domains");
   $("#childParentId").innerHTML = renderParentOptions(parents);
 
+  const mainParent = parents.find((p) => p.is_main);
+  const sharedOrigin = mainParent?.origin_hostname || mainParent?.cname_target || "";
+
   $("#parentDomainsTableBody").innerHTML = parents.length
     ? parents
         .map(
           (p) => `
-      <tr>
-        <td><strong>${esc(p.domain)}</strong></td>
-        <td><code>${esc(p.cname_target || defaultCnameTargetForParent(p.domain))}</code></td>
+      <tr class="${p.is_main ? "parent-main-row" : ""}">
+        <td>
+          <strong>${esc(p.domain)}</strong>
+          ${p.is_main ? `<span class="badge badge-on" style="margin-left:8px">Domain chính</span>` : ""}
+        </td>
+        <td>
+          ${
+            p.is_main
+              ? `<code>${esc(p.origin_hostname)}</code>`
+              : sharedOrigin
+                ? `<span class="domain-note">→ ${esc(sharedOrigin)}</span>`
+                : "—"
+          }
+        </td>
         <td><code>${esc(p.server_ip || "—")}</code></td>
         <td><span class="badge ${p.has_token ? "badge-on" : "badge-off"}">${p.has_token ? "OK" : "Thiếu"}</span></td>
         <td class="domain-actions">
+          ${
+            p.is_main
+              ? ""
+              : `<button type="button" class="btn btn-primary btn-sm" data-set-main-parent="${p.id}" data-parent-domain="${esc(p.domain)}">Đặt chính</button>`
+          }
           <button type="button" class="btn btn-ghost btn-sm" data-edit-parent="${p.id}">Sửa</button>
           <button type="button" class="btn btn-ghost btn-sm" data-parent-dns="${p.id}" data-parent-domain="${esc(p.domain)}">DNS</button>
           <button type="button" class="btn btn-ghost btn-sm" data-parent-verify="${p.id}">Test</button>
-          <button type="button" class="btn btn-danger btn-sm" data-del-parent="${p.id}">Xóa</button>
+          <button type="button" class="btn btn-danger btn-sm" data-del-parent="${p.id}"${p.is_main ? " disabled title=\"Không xóa domain chính\"" : ""}>Xóa</button>
         </td>
       </tr>`,
         )
         .join("")
     : `<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:24px">Chưa có domain cha. Mở form phía trên để thêm token.</td></tr>`;
+
+  $$("[data-set-main-parent]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const domain = btn.dataset.parentDomain;
+      if (!confirm(`Đặt ${domain} làm domain chính?\nOrigin CNAME chung: origin.${domain}`)) return;
+      try {
+        const result = await api(`/parent-domains/${btn.dataset.setMainParent}/set-main`, {
+          method: "POST",
+        });
+        toast(`Đã đặt ${domain} làm domain chính · ${result.primary_origin_domain}`);
+        await loadDomains();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  });
 
   $$("[data-edit-parent]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -660,6 +682,13 @@ async function loadDomains() {
     api("/subdomains"),
     loadParentDomains().then(() => api("/config")),
   ]);
+
+  const originHint = $("#primaryOriginHint");
+  if (originHint) {
+    originHint.innerHTML = config.main_parent_domain && config.primary_origin_domain
+      ? `<strong>Domain chính:</strong> ${esc(config.main_parent_domain)} · <strong>Origin CNAME:</strong> <code>${esc(config.primary_origin_domain)}</code> — mọi subdomain trỏ về origin này.`
+      : "Chưa có domain chính. Vào tab <strong>Domain cha</strong> → bấm <strong>Đặt chính</strong> cho domain gốc (vd. shopacc24h.shop).";
+  }
 
   const hint = $("#serverIpHint");
   if (hint) {
@@ -1229,7 +1258,6 @@ $("#parentDomainForm")?.addEventListener("submit", async (e) => {
     domain: $("#parentDomain").value.trim(),
     cf_zone_id: $("#parentZoneId").value.trim(),
     server_ip: $("#parentServerIp").value.trim(),
-    cname_target: $("#parentCnameTarget").value.trim(),
     cf_proxied: $("#parentProxied").value === "1",
   };
   const token = $("#parentCfToken").value.trim();
@@ -1463,10 +1491,5 @@ function initTheme() {
 $("#themeToggle")?.addEventListener("click", toggleTheme);
 $("#loginThemeBtn")?.addEventListener("click", toggleTheme);
 initTheme();
-
-$("#parentDomain")?.addEventListener("input", () => {
-  const target = defaultCnameTargetForParent($("#parentDomain").value);
-  if (target) $("#parentCnameTarget").placeholder = target;
-});
 
 checkAuth();
