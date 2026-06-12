@@ -100,7 +100,7 @@
       <div class="section-head"><h2 class="section-title">Các sản phẩm khác</h2></div>
       <div class="other-products-grid">
         <% site.other_products.forEach(function(p) { %>
-        <a class="other-product-card" href="<%= site.messenger_url %>" target="_blank" rel="noopener noreferrer">
+        <a class="other-product-card" href="<%= p.url || site.messenger_url %>" target="_blank" rel="noopener noreferrer">
           <div class="other-product-thumb"><img src="<%= p.img %>" alt="<%= p.name %>" loading="lazy" /></div>
           <div class="other-product-body">
             <% if (p.tag) { %><span class="other-product-tag"><%= p.tag %></span><% } %>

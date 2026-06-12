@@ -237,14 +237,35 @@ function renderDetailImages() {
   schedulePreviewUpdate();
 }
 
+function buildOtherSiteOptions(selectedSiteId = "", excludeSiteId = null) {
+  const sites = siteListCache.filter((s) => String(s.id) !== String(excludeSiteId));
+  return [
+    '<option value="">— Nhập thủ công / URL riêng —</option>',
+    ...sites.map((s) => {
+      const label = `${s.domain} — ${s.product_title || s.name || "Trang"}`;
+      const link = s.production_url || s.preview_url || "";
+      const thumb = (s.product_images && s.product_images[0]) || "";
+      return `<option value="${s.id}" data-url="${esc(link)}" data-name="${esc(s.product_title || s.name || "")}" data-img="${esc(thumb)}" data-tag="${esc(s.tag_hot || "")}"${String(s.id) === String(selectedSiteId) ? " selected" : ""}>${esc(label)}</option>`;
+    }),
+  ].join("");
+}
+
 function renderOtherProducts() {
   $("#otherProducts").innerHTML = otherProducts
     .map(
       (p, i) => `
     <div class="other-row" data-i="${i}">
       <img src="${p.img || ""}" alt="" onerror="this.style.background='#333'">
-      <input type="text" placeholder="Tên SP" value="${esc(p.name)}" data-field="name">
-      <input type="text" placeholder="Tag" value="${esc(p.tag)}" data-field="tag">
+      <div class="other-row-fields">
+        <select class="other-site-pick" data-field="site_id" title="Chọn landing page khác">
+          ${buildOtherSiteOptions(p.site_id || "", editingId)}
+        </select>
+        <div class="other-row-inline">
+          <input type="text" placeholder="Tên sản phẩm" value="${esc(p.name)}" data-field="name">
+          <input type="text" placeholder="Tag" value="${esc(p.tag)}" data-field="tag">
+        </div>
+        <input type="url" placeholder="Link (URL landing page hoặc messenger)" value="${esc(p.url || "")}" data-field="url">
+      </div>
       <button type="button" class="btn btn-danger btn-sm" data-rm-other="${i}">×</button>
     </div>`,
     )
@@ -411,11 +432,17 @@ async function loadServerConfig() {
 }
 
 function collectOtherProducts() {
-  return [...$("#otherProducts").querySelectorAll(".other-row")].map((row, i) => ({
-    name: row.querySelector('[data-field="name"]').value,
-    tag: row.querySelector('[data-field="tag"]').value,
-    img: otherProducts[i]?.img || "",
-  }));
+  return [...$("#otherProducts").querySelectorAll(".other-row")].map((row, i) => {
+    const sitePick = row.querySelector('[data-field="site_id"]');
+    const siteId = sitePick?.value ? Number(sitePick.value) : null;
+    return {
+      name: row.querySelector('[data-field="name"]')?.value || "",
+      tag: row.querySelector('[data-field="tag"]')?.value || "",
+      url: row.querySelector('[data-field="url"]')?.value.trim() || "",
+      site_id: siteId,
+      img: otherProducts[i]?.img || "",
+    };
+  });
 }
 
 async function fillForm(site) {
@@ -441,7 +468,13 @@ async function fillForm(site) {
   $("#active").value = site?.active === false ? "0" : "1";
   productImages = [...(site?.product_images || [])];
   detailImages = [...(site?.detail_images || [])];
-  otherProducts = [...(site?.other_products || [])];
+  otherProducts = (site?.other_products || []).map((p) => ({
+    name: p.name || "",
+    tag: p.tag || "",
+    img: p.img || "",
+    url: p.url || "",
+    site_id: p.site_id || null,
+  }));
   renderProductImages();
   renderDetailImages();
   renderOtherProducts();
@@ -1320,8 +1353,30 @@ $("#detailImages").addEventListener("click", (e) => {
 
 $("#addOtherBtn").addEventListener("click", () => {
   otherProducts = collectOtherProducts();
-  otherProducts.push({ name: "", tag: "", img: productImages[0] || "" });
+  otherProducts.push({ name: "", tag: "", img: productImages[0] || "", url: "", site_id: null });
   renderOtherProducts();
+});
+
+$("#otherProducts").addEventListener("change", (e) => {
+  if (e.target.dataset.field !== "site_id") return;
+  const row = e.target.closest(".other-row");
+  if (!row) return;
+  const opt = e.target.selectedOptions[0];
+  if (!opt?.value) return;
+  const nameEl = row.querySelector('[data-field="name"]');
+  const tagEl = row.querySelector('[data-field="tag"]');
+  const urlEl = row.querySelector('[data-field="url"]');
+  if (nameEl && opt.dataset.name) nameEl.value = opt.dataset.name;
+  if (tagEl && opt.dataset.tag) tagEl.value = opt.dataset.tag;
+  if (urlEl && opt.dataset.url) urlEl.value = opt.dataset.url;
+  if (opt.dataset.img) {
+    const i = Number(row.dataset.i);
+    const thumb = opt.dataset.img;
+    otherProducts[i] = { ...(otherProducts[i] || {}), img: thumb };
+    const imgEl = row.querySelector("img");
+    if (imgEl) imgEl.src = thumb;
+  }
+  schedulePreviewUpdate();
 });
 
 $("#otherProducts").addEventListener("click", (e) => {
