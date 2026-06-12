@@ -6,7 +6,7 @@ const publicRoutes = require("./routes/public");
 const adminRoutes = require("./routes/admin");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4433;
 
 app.set("trust proxy", true);
 

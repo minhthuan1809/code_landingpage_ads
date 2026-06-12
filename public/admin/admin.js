@@ -5,7 +5,7 @@ let productImages = [];
 let detailImages = [];
 let otherProducts = [];
 let editingId = null;
-let serverConfig = { port: 3000 };
+let serverConfig = { port: 4433 };
 let siteListCache = [];
 let subdomainListCache = [];
 let authCheckVersion = 0;
@@ -285,7 +285,7 @@ function esc(s) {
 }
 
 function injectPreviewBase(html) {
-  const port = serverConfig.port || 3000;
+  const port = serverConfig.port || 4433;
   const base = `http://127.0.0.1:${port}/`;
   if (/<base\s/i.test(html)) return html;
   return html.replace(/<head([^>]*)>/i, `<head$1><base href="${base}">`);
@@ -339,7 +339,7 @@ function bindPreviewListeners() {
 
 function buildPreviewUrl(domain) {
   const d = (domain || "").trim().toLowerCase();
-  const port = serverConfig.port || 3000;
+  const port = serverConfig.port || 4433;
   const base = `http://127.0.0.1:${port}`;
   if (!d || d === "localhost" || d === "127.0.0.1") return `${base}/`;
   return `${base}/?preview=${encodeURIComponent(d)}`;
