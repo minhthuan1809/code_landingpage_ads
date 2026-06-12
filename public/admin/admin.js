@@ -11,6 +11,8 @@ let subdomainListCache = [];
 let authCheckVersion = 0;
 let accessToken = sessionStorage.getItem("accessToken") || null;
 let refreshPromise = null;
+let previewTimer = null;
+let previewRequestId = 0;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -129,9 +131,14 @@ function showView(name, { syncUrl = true, replace = false, tab } = {}) {
   $("#listView").classList.toggle("hidden", view !== "list");
   $("#domainsView").classList.toggle("hidden", view !== "domains");
   $("#editView").classList.toggle("hidden", view !== "edit");
+  $("#app")?.classList.toggle("edit-mode", view === "edit");
   $$(".nav-btn[data-view]").forEach((b) => {
     b.classList.toggle("active", b.dataset.view === view);
   });
+  if (view === "edit") {
+    bindPreviewListeners();
+    schedulePreviewUpdate();
+  }
   if (view === "domains") {
     switchDomainTab(tab || getActiveDomainTab(), { syncUrl: false });
     loadDomains();
@@ -207,6 +214,7 @@ function initEditor() {
       ],
     },
   });
+  quill.on("text-change", schedulePreviewUpdate);
 }
 
 function renderProductImages() {
@@ -216,6 +224,7 @@ function renderProductImages() {
         `<div class="img-item"><img src="${url}" alt=""><button type="button" data-rm-img="${i}">×</button></div>`,
     )
     .join("");
+  schedulePreviewUpdate();
 }
 
 function renderDetailImages() {
@@ -225,6 +234,7 @@ function renderDetailImages() {
         `<div class="img-item"><img src="${url}" alt=""><button type="button" data-rm-detail-img="${i}">×</button></div>`,
     )
     .join("");
+  schedulePreviewUpdate();
 }
 
 function renderOtherProducts() {
@@ -239,6 +249,7 @@ function renderOtherProducts() {
     </div>`,
     )
     .join("");
+  schedulePreviewUpdate();
 }
 
 function formatVisits(n) {
@@ -250,6 +261,59 @@ function esc(s) {
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
+}
+
+function injectPreviewBase(html) {
+  const port = serverConfig.port || 3000;
+  const base = `http://127.0.0.1:${port}/`;
+  if (/<base\s/i.test(html)) return html;
+  return html.replace(/<head([^>]*)>/i, `<head$1><base href="${base}">`);
+}
+
+async function fetchPreviewHtml(payload) {
+  const res = await fetch(`${API}/preview`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    credentials: "same-origin",
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || "Không tạo được bản xem trước");
+  }
+  return res.text();
+}
+
+function schedulePreviewUpdate() {
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(() => {
+    void updateLandingPreview();
+  }, 280);
+}
+
+async function updateLandingPreview() {
+  const iframe = $("#landingPreview");
+  if (!iframe || $("#editView")?.classList.contains("hidden")) return;
+
+  const requestId = ++previewRequestId;
+  try {
+    const payload = getFormData();
+    if (editingId) payload.id = editingId;
+    const html = injectPreviewBase(await fetchPreviewHtml(payload));
+    if (requestId !== previewRequestId) return;
+    iframe.srcdoc = html;
+  } catch (err) {
+    if (requestId !== previewRequestId) return;
+    iframe.srcdoc = `<!doctype html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="font-family:sans-serif;padding:20px;color:#64748b;line-height:1.5"><p>${esc(err.message)}</p></body></html>`;
+  }
+}
+
+function bindPreviewListeners() {
+  const form = $("#siteForm");
+  if (!form || form.dataset.previewBound) return;
+  form.dataset.previewBound = "1";
+  form.addEventListener("input", schedulePreviewUpdate);
+  form.addEventListener("change", schedulePreviewUpdate);
 }
 
 function buildPreviewUrl(domain) {
@@ -384,6 +448,7 @@ async function fillForm(site) {
   initEditor();
   quill.root.innerHTML = site?.detail_content || "";
   syncDomainPickUi();
+  schedulePreviewUpdate();
 }
 
 function getFormData() {
@@ -686,12 +751,33 @@ function bindSiteCardActions() {
     });
   });
 
+  $$("[data-toggle-active]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const siteId = btn.dataset.toggleActive;
+      const isActive = btn.dataset.active === "1";
+      const nextActive = !isActive;
+      if (!confirm(`${isActive ? "Tắt" : "Bật"} hoạt động trang này? Trang sẽ ${isActive ? "không" : ""} hiển thị công khai.`)) return;
+      try {
+        btn.disabled = true;
+        await api(`/sites/${siteId}`, {
+          method: "PUT",
+          body: JSON.stringify({ active: nextActive }),
+        });
+        toast(nextActive ? "Đã bật hoạt động" : "Đã tắt hoạt động");
+        await loadSites();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+      }
+    });
+  });
+
   $$("[data-delete-site]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       if (!confirm("XÃ³a trang nÃ y? Subdomain sáº½ Ä‘Æ°á»£c giáº£i phÃ³ng Ä‘á»ƒ gÃ¡n láº¡i.")) return;
       try {
         await api(`/sites/${btn.dataset.deleteSite}`, { method: "DELETE" });
-        toast("ÄÃ£ xÃ³a trang");
+        toast("Đã xóa trang");
         await loadSites();
         await loadDomains();
       } catch (err) {
@@ -773,6 +859,10 @@ function renderSiteCards() {
         </div>
 
         <div class="site-actions">
+          <button type="button" class="btn btn-ghost btn-sm site-toggle-btn${s.active ? " is-on" : ""}" data-toggle-active="${s.id}" data-active="${s.active ? "1" : "0"}" title="${s.active ? "Tắt trang tạm thời" : "Bật lại trang"}">
+            <i data-lucide="${s.active ? "pause-circle" : "play-circle"}"></i>
+            ${s.active ? "Tắt hoạt động" : "Bật hoạt động"}
+          </button>
           <button type="button" class="btn btn-ghost btn-sm" data-edit="${s.id}">
             <i data-lucide="pencil"></i> Sửa
           </button>
@@ -884,6 +974,27 @@ async function loadSites() {
         await openEditView(btn.dataset.edit);
       } catch (err) {
         alert(err.message);
+      }
+    });
+  });
+
+  $$("[data-toggle-active]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const siteId = btn.dataset.toggleActive;
+      const isActive = btn.dataset.active === "1";
+      const nextActive = !isActive;
+      if (!confirm(`${isActive ? "Tắt" : "Bật"} hoạt động trang này? Trang sẽ ${isActive ? "không" : ""} hiển thị công khai.`)) return;
+      try {
+        btn.disabled = true;
+        await api(`/sites/${siteId}`, {
+          method: "PUT",
+          body: JSON.stringify({ active: nextActive }),
+        });
+        toast(nextActive ? "Đã bật hoạt động" : "Đã tắt hoạt động");
+        await loadSites();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
       }
     });
   });
@@ -1110,7 +1221,10 @@ $("#subdomainForm")?.addEventListener("submit", async (e) => {
   }
 });
 
-$("#subdomainPick")?.addEventListener("change", syncDomainPickUi);
+$("#subdomainPick")?.addEventListener("change", () => {
+  syncDomainPickUi();
+  schedulePreviewUpdate();
+});
 
 $$("[data-domain-tab]").forEach((btn) => {
   btn.addEventListener("click", () => switchDomainTab(btn.dataset.domainTab));
@@ -1179,6 +1293,7 @@ $("#productImages").addEventListener("click", (e) => {
   if (i !== undefined) {
     productImages.splice(Number(i), 1);
     renderProductImages();
+    schedulePreviewUpdate();
   }
 });
 
@@ -1199,6 +1314,7 @@ $("#detailImages").addEventListener("click", (e) => {
   if (i !== undefined) {
     detailImages.splice(Number(i), 1);
     renderDetailImages();
+    schedulePreviewUpdate();
   }
 });
 
@@ -1213,6 +1329,7 @@ $("#otherProducts").addEventListener("click", (e) => {
     otherProducts = collectOtherProducts();
     otherProducts.splice(Number(e.target.dataset.rmOther), 1);
     renderOtherProducts();
+    schedulePreviewUpdate();
   }
 });
 

@@ -13,6 +13,7 @@ const {
   getAllSubdomains,
   createSubdomain,
   deleteSubdomain,
+  buildPreviewSite,
   createSite,
   updateSite,
   deleteSite,
@@ -292,6 +293,15 @@ router.delete("/subdomains/:id", requireAuth, async (req, res) => {
       dns = { domain, error: e.message };
     }
     res.json({ ok: true, dns });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post("/preview", requireAuth, (req, res) => {
+  try {
+    const site = buildPreviewSite(req.body);
+    res.render("landing", { site });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }

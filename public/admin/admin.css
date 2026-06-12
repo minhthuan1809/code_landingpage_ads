@@ -1080,6 +1080,17 @@ input[type="color"]::-webkit-color-swatch {
   margin-top: 0;
 }
 
+.site-toggle-btn.is-on {
+  color: #b45309;
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.site-toggle-btn.is-on:hover {
+  background: rgba(245, 158, 11, 0.14);
+  color: #92400e;
+}
+
 .site-card .site-actions {
   grid-column: 2 / 3;
   justify-content: flex-end;
@@ -1491,7 +1502,152 @@ body {
 }
 
 .site-form-panel {
-  max-width: 1120px;
+  max-width: none;
+}
+
+.app.edit-mode {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app.edit-mode .sidebar {
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app.edit-mode .main {
+  max-width: none;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  height: 100vh;
+  overflow: hidden;
+  padding: 24px 28px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.app.edit-mode #editView:not(.hidden) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app.edit-mode #editView .topbar {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+.edit-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.app.edit-mode .edit-workspace {
+  flex: 1;
+  min-height: 0;
+}
+
+.edit-workspace-main {
+  min-width: 0;
+}
+
+.app.edit-mode .edit-workspace-main {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  padding-bottom: 12px;
+}
+
+.edit-workspace-preview {
+  min-width: 0;
+}
+
+.app.edit-mode .edit-workspace-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+  top: auto;
+}
+
+.preview-panel {
+  padding: 16px;
+}
+
+.app.edit-mode .preview-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+}
+
+.preview-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.preview-panel-head strong {
+  display: block;
+  font-size: 14px;
+}
+
+.preview-panel-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.preview-live-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.preview-phone-frame {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: #f8fafc;
+  box-shadow: var(--shadow-lg);
+}
+
+.app.edit-mode .preview-phone-frame {
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-phone-frame iframe {
+  display: block;
+  width: 100%;
+  height: min(78vh, 860px);
+  border: 0;
+  background: #f8fafc;
+}
+
+.app.edit-mode .preview-phone-frame iframe {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
 }
 
 .form-section {
@@ -1673,6 +1829,38 @@ select:focus {
   outline-offset: 2px;
 }
 
+@media (min-width: 1400px) {
+  .app.edit-mode .edit-workspace {
+    grid-template-columns: minmax(0, 1fr) 420px;
+    gap: 28px;
+  }
+
+  .app.edit-mode .main {
+    padding: 28px 36px 36px;
+  }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .app.edit-mode .edit-workspace {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .app.edit-mode .edit-workspace {
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+  }
+
+  .app.edit-mode .main {
+    padding: 20px 22px 28px;
+  }
+
+  .app.edit-mode .preview-panel {
+    padding: 12px;
+  }
+}
+
 @media (max-width: 1180px) {
   .main {
     padding: 24px;
@@ -1725,6 +1913,62 @@ select:focus {
   .nav-btn,
   .theme-toggle {
     width: auto;
+  }
+
+  .app.edit-mode {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    flex-direction: column;
+  }
+
+  .app.edit-mode .sidebar {
+    height: auto;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .app.edit-mode .main {
+    height: auto;
+    overflow: visible;
+    padding: 20px 18px 28px;
+  }
+
+  .app.edit-mode #editView:not(.hidden) {
+    overflow: visible;
+  }
+
+  .app.edit-mode .edit-workspace {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .app.edit-mode .edit-workspace-preview {
+    order: -1;
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    background: var(--bg);
+    padding-bottom: 8px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .app.edit-mode .edit-workspace-main {
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .app.edit-mode .preview-panel {
+    flex: none;
+  }
+
+  .app.edit-mode .preview-phone-frame {
+    flex: none;
+    min-height: 0;
+  }
+
+  .app.edit-mode .preview-phone-frame iframe {
+    height: min(44vh, 520px);
   }
 }
 
@@ -1840,6 +2084,18 @@ select:focus {
   .site-domain-toolbar .inline-domain-manual,
   .site-card .site-actions .btn {
     width: 100%;
+  }
+
+  .app.edit-mode .main {
+    padding: 14px 12px 24px;
+  }
+
+  .app.edit-mode .preview-phone-frame iframe {
+    height: min(38vh, 420px);
+  }
+
+  .app.edit-mode #editView .topbar h1 {
+    font-size: 20px;
   }
 }
 
