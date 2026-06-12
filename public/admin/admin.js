@@ -5,8 +5,8 @@ let productImages = [];
 let detailImages = [];
 let otherProducts = [];
 let editingId = null;
-let sitesCache = [];
 let serverConfig = { port: 3000 };
+let authCheckVersion = 0;
 let accessToken = sessionStorage.getItem("accessToken") || null;
 let refreshPromise = null;
 
@@ -237,6 +237,12 @@ async function copyText(text) {
   toast("Đã copy");
 }
 
+function bindCopyUrlClicks() {
+  $$("[data-copy-url]").forEach((el) => {
+    el.addEventListener("click", () => copyText(el.dataset.copyUrl));
+  });
+}
+
 async function loadServerConfig() {
   serverConfig = await api("/config");
 }
@@ -312,16 +318,6 @@ function getFormData() {
   if (subdomainPick) data.subdomain_id = Number(subdomainPick);
   else if (editingId) data.subdomain_id = null;
   return data;
-}
-
-function renderSiteOptions(sites, selectedId = "") {
-  return [
-    '<option value="">— Chọn trang —</option>',
-    ...sites.map(
-      (s) =>
-        `<option value="${s.id}"${String(s.id) === String(selectedId) ? " selected" : ""}>${esc(s.domain)} — ${esc(s.name || s.product_title?.slice(0, 40) || "Trang #" + s.id)}</option>`,
-    ),
-  ].join("");
 }
 
 function renderParentOptions(parents, selectedId = "") {
@@ -419,8 +415,7 @@ async function loadDomains() {
           }
         </td>
         <td class="url-cell">
-          <code class="url-code">${esc(s.preview_url)}</code>
-          <button type="button" class="btn btn-ghost btn-sm" data-copy-url="${esc(s.preview_url)}">Copy</button>
+          <code class="url-code url-copy" data-copy-url="${esc(s.preview_url)}" title="Bấm để copy">${esc(s.preview_url)}</code>
         </td>
         <td class="domain-actions">
           ${s.site_id ? `<button type="button" class="btn btn-ghost btn-sm" data-edit-site="${s.site_id}">Sửa trang</button>` : ""}
@@ -433,9 +428,7 @@ async function loadDomains() {
         .join("")
     : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:32px">Chưa có subdomain. Tạo ở form trên (cần domain cha trước).</td></tr>`;
 
-  $$("[data-copy-url]").forEach((btn) => {
-    btn.addEventListener("click", () => copyText(btn.dataset.copyUrl));
-  });
+  bindCopyUrlClicks();
 
   $$("[data-edit-site]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -519,7 +512,6 @@ async function saveInlineDomain(siteId, row) {
 
 async function loadSites() {
   const [sites, subdomains] = await Promise.all([api("/sites"), api("/subdomains")]);
-  sitesCache = sites;
   $("#sitesTableBody").innerHTML = sites.length
     ? sites
         .map((s) => {
@@ -541,10 +533,7 @@ async function loadSites() {
           </div>
         </td>
         <td class="url-cell">
-          <div class="url-inline">
-            <code class="url-code">${esc(s.preview_url)}</code>
-            <button type="button" class="btn btn-ghost btn-sm" data-copy-url="${esc(s.preview_url)}" title="Copy URL">Copy</button>
-          </div>
+          <code class="url-code url-copy" data-copy-url="${esc(s.preview_url)}" title="Bấm để copy">${esc(s.preview_url)}</code>
         </td>
         <td class="site-name-cell">${esc(s.name || s.product_title?.slice(0, 30) || "—")}</td>
         <td class="site-visits-cell"><strong>${formatVisits(s.visit_count)}</strong></td>
@@ -578,9 +567,7 @@ async function loadSites() {
     });
   });
 
-  $$("[data-copy-url]").forEach((btn) => {
-    btn.addEventListener("click", () => copyText(btn.dataset.copyUrl));
-  });
+  bindCopyUrlClicks();
 
   $$("[data-edit]").forEach((btn) => {
     btn.addEventListener("click", async () => {
@@ -635,17 +622,22 @@ async function uploadFiles(files) {
 function showApp(loggedIn) {
   $("#loginView").style.display = loggedIn ? "none" : "flex";
   $("#loginThemeBtn").style.display = loggedIn ? "none" : "flex";
-  $("#app").classList.toggle("show", loggedIn);
+  $("#app").classList.toggle("is-open", loggedIn);
 }
 
 async function checkAuth() {
+  const version = ++authCheckVersion;
   try {
     if (!accessToken) await refreshAccessToken();
+    if (version !== authCheckVersion) return;
     await api("/me");
+    if (version !== authCheckVersion) return;
     showApp(true);
     await loadServerConfig();
+    if (version !== authCheckVersion) return;
     await loadSites();
   } catch {
+    if (version !== authCheckVersion) return;
     setAccessToken(null);
     showApp(false);
   }
@@ -653,6 +645,7 @@ async function checkAuth() {
 
 $("#loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const version = ++authCheckVersion;
   try {
     const data = await api("/login", {
       method: "POST",
@@ -661,12 +654,15 @@ $("#loginForm").addEventListener("submit", async (e) => {
         password: $("#password").value,
       }),
     }, false);
+    if (version !== authCheckVersion) return;
     setAccessToken(data.accessToken);
     $("#loginError").style.display = "none";
     showApp(true);
     await loadServerConfig();
+    if (version !== authCheckVersion) return;
     await loadSites();
   } catch (err) {
+    if (version !== authCheckVersion) return;
     $("#loginError").textContent = err.message;
     $("#loginError").style.display = "block";
   }

@@ -26,7 +26,7 @@
         <form id="loginForm">
           <div class="form-group">
             <label>Tài khoản</label>
-            <input type="text" id="username" value="admin" required />
+            <input type="text" id="username" name="username" value="admin" required autocomplete="username" />
           </div>
           <div class="form-group">
             <label>Mật khẩu</label>
@@ -44,7 +44,6 @@
         <p class="sub">Quản trị multi-domain</p>
         <button class="nav-btn active" data-view="list">Danh sách trang</button>
         <button class="nav-btn" data-view="domains">Quản lý domain</button>
-        <button class="nav-btn" data-view="edit">Sửa / Thêm trang</button>
         <button type="button" class="theme-toggle" id="themeToggle" style="margin-top:16px">
           <span id="themeLabel">Giao diện sáng</span>
           <span class="theme-toggle-icon" id="themeIcon">☀️</span>

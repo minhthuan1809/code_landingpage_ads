@@ -5,20 +5,13 @@ const fs = require("fs");
 const {
   getAllSites,
   getSiteById,
-  getAllDomains,
-  getDomainById,
   getAllParentDomains,
   getParentDomainById,
   createParentDomain,
-  updateParentDomain,
   deleteParentDomain,
   getAllSubdomains,
-  getSubdomainById,
   createSubdomain,
   deleteSubdomain,
-  createDomain,
-  updateDomain,
-  deleteDomain,
   createSite,
   updateSite,
   deleteSite,
@@ -27,7 +20,6 @@ const {
   getRefreshTokenRow,
   deleteRefreshToken,
   getCloudflareSettings,
-  saveCloudflareSettings,
 } = require("../lib/db");
 const { getServerConfig, exportSites, buildSiteUrls } = require("../lib/urls");
 const { verifyToken } = require("../lib/cloudflare");
@@ -149,31 +141,6 @@ router.get("/sites/export", requireAuth, (_req, res) => {
   });
 });
 
-router.get("/cloudflare/settings", requireAuth, (_req, res) => {
-  const cf = getCloudflareSettings();
-  res.json({
-    zone_id: cf.zone_id,
-    public_ip: cf.public_ip,
-    proxied: cf.proxied,
-    has_token: Boolean(cf.api_token),
-  });
-});
-
-router.put("/cloudflare/settings", requireAuth, (req, res) => {
-  const saved = saveCloudflareSettings({
-    api_token: req.body.api_token,
-    zone_id: req.body.zone_id,
-    public_ip: req.body.public_ip,
-    proxied: req.body.proxied !== false,
-  });
-  res.json({
-    zone_id: saved.zone_id,
-    public_ip: saved.public_ip,
-    proxied: saved.proxied,
-    has_token: Boolean(saved.api_token),
-  });
-});
-
 router.post("/cloudflare/verify", requireAuth, async (_req, res) => {
   const cf = getCloudflareSettings();
   if (!cf.api_token) return res.status(400).json({ error: "Chưa nhập API Token" });
@@ -215,27 +182,6 @@ router.post("/parent-domains", requireAuth, (req, res) => {
       active: req.body.active !== false,
     });
     res.status(201).json(parent);
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-router.put("/parent-domains/:id", requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  if (!getParentDomainById(id)) return res.status(404).json({ error: "Không tìm thấy" });
-  try {
-    res.json(
-      updateParentDomain(id, {
-        domain: req.body.domain,
-        name: req.body.name,
-        cf_api_token: req.body.cf_api_token,
-        cf_zone_id: req.body.cf_zone_id,
-        server_ip: req.body.server_ip,
-        cf_proxied: req.body.cf_proxied,
-        note: req.body.note,
-        active: req.body.active,
-      }),
-    );
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
@@ -332,66 +278,6 @@ router.delete("/subdomains/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/domains", requireAuth, (_req, res) => {
-  const config = getServerConfig();
-  const domains = getAllDomains().map((row) => ({
-    ...row,
-    ...buildSiteUrls(row.domain, config),
-  }));
-  res.json(domains);
-});
-
-router.post("/domains", requireAuth, (req, res) => {
-  try {
-    const domain = createDomain({
-      domain: req.body.domain,
-      site_id: Number(req.body.site_id),
-      parent_id: req.body.parent_id ? Number(req.body.parent_id) : null,
-      note: req.body.note,
-      active: req.body.active !== false,
-    });
-    res.status(201).json({
-      ...domain,
-      ...buildSiteUrls(domain.domain, getServerConfig()),
-    });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-router.put("/domains/:id", requireAuth, (req, res) => {
-  const id = Number(req.params.id);
-  if (!getDomainById(id)) return res.status(404).json({ error: "Không tìm thấy" });
-  try {
-    const domain = updateDomain(id, {
-      site_id: req.body.site_id !== undefined ? Number(req.body.site_id) : undefined,
-      active: req.body.active,
-      note: req.body.note,
-    });
-    res.json({
-      ...domain,
-      ...buildSiteUrls(domain.domain, getServerConfig()),
-    });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-router.delete("/domains/:id", requireAuth, async (req, res) => {
-  try {
-    const domain = deleteDomain(Number(req.params.id));
-    let dns = null;
-    try {
-      dns = await removeDomainDns(domain);
-    } catch (e) {
-      dns = { domain, error: e.message };
-    }
-    res.json({ ok: true, dns });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
 router.get("/sites", requireAuth, (_req, res) => {
   const config = getServerConfig();
   const sites = getAllSites().map((site) => ({
@@ -434,11 +320,6 @@ router.delete("/sites/:id", requireAuth, async (req, res) => {
   const dns = await removeDnsForSite(id);
   deleteSite(id);
   res.json({ ok: true, dns });
-});
-
-router.post("/upload", requireAuth, upload.single("file"), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: "Không có file" });
-  res.json({ url: `/uploads/${req.file.filename}` });
 });
 
 router.post("/upload-multiple", requireAuth, upload.array("files", 20), (req, res) => {

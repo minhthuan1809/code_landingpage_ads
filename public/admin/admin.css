@@ -78,7 +78,7 @@ a { color: var(--brand); }
 
 /* Layout */
 .app { display: none; min-height: 100vh; }
-.app.show { display: flex; }
+.app.is-open { display: flex; }
 
 .sidebar {
   width: 240px;
@@ -483,12 +483,6 @@ textarea { min-height: 80px; resize: vertical; }
   max-width: 260px;
 }
 
-.url-inline {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
 .url-code {
   flex: 1;
   min-width: 0;
@@ -498,9 +492,12 @@ textarea { min-height: 80px; resize: vertical; }
   color: var(--muted);
 }
 
-.url-inline .btn-sm {
-  flex-shrink: 0;
-  padding: 4px 8px;
+.url-copy {
+  cursor: pointer;
+}
+
+.url-copy:hover {
+  color: var(--brand);
 }
 
 .url-preview-box {

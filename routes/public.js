@@ -3,7 +3,6 @@ const {
   getSiteByDomain,
   normalizeDomain,
   recordVisit,
-  formatPublicSite,
 } = require("../lib/db");
 const { isLocalAccessHost } = require("../lib/urls");
 
@@ -36,20 +35,6 @@ function resolveRequestDomain(req) {
   }
   return normalizeDomain(host);
 }
-
-router.get("/api/site", (req, res) => {
-  const domain = resolveRequestDomain(req);
-  const site = getSiteByDomain(domain);
-  if (!site) {
-    return res.status(404).json({
-      error: "Domain chưa được cấu hình",
-      id: domain,
-      domain,
-    });
-  }
-  recordVisit(site.site_id, getClientIp(req));
-  res.json(formatPublicSite(site));
-});
 
 router.get("/", (req, res) => {
   const domain = resolveRequestDomain(req);
