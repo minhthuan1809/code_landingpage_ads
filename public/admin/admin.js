@@ -172,7 +172,7 @@ function setPreviewLoading(loading) {
   $("#landingPreview")?.closest(".preview-phone-frame")?.classList.toggle("is-preview-loading", loading);
 }
 
-const ADMIN_VIEWS = new Set(["list", "domains", "edit"]);
+const ADMIN_VIEWS = new Set(["list", "dashboard", "domains", "edit"]);
 const DOMAIN_TABS = new Set(["children", "parents"]);
 let applyingAdminUrl = false;
 
@@ -218,6 +218,7 @@ function syncAdminUrl(state, { replace = false } = {}) {
 function showView(name, { syncUrl = true, replace = false, tab } = {}) {
   const view = ADMIN_VIEWS.has(name) ? name : "list";
   $("#listView").classList.toggle("hidden", view !== "list");
+  $("#dashboardView").classList.toggle("hidden", view !== "dashboard");
   $("#domainsView").classList.toggle("hidden", view !== "domains");
   $("#editView").classList.toggle("hidden", view !== "edit");
   $("#app")?.classList.toggle("edit-mode", view === "edit");
@@ -231,6 +232,9 @@ function showView(name, { syncUrl = true, replace = false, tab } = {}) {
   if (view === "domains") {
     switchDomainTab(tab || getActiveDomainTab(), { syncUrl: false });
     loadDomains();
+  }
+  if (view === "dashboard") {
+    void loadVisitAnalytics();
   }
   if (typeof lucide !== "undefined") lucide.createIcons();
   if (syncUrl && !applyingAdminUrl) {
@@ -429,29 +433,127 @@ function formatDisplayDate(value) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 function ensureAnalyticsDates() {
   const fromEl = $("#analyticsFromDate");
   const toEl = $("#analyticsToDate");
   if (!fromEl || !toEl) return null;
   const today = formatIsoDate(new Date());
-  if (!fromEl.value) fromEl.value = today;
+  if (!fromEl.value) fromEl.value = formatIsoDate(addDays(new Date(), -6));
   if (!toEl.value) toEl.value = fromEl.value;
   if (fromEl.value > toEl.value) toEl.value = fromEl.value;
   return { from: fromEl.value, to: toEl.value };
+}
+
+function getDateSpanDays(from, to) {
+  const start = new Date(`${from}T00:00:00`);
+  const end = new Date(`${to}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 1;
+  return Math.max(1, Math.round((end - start) / 86400000) + 1);
 }
 
 function analyticsEmptyRow(message) {
   return `<div class="analytics-empty">${esc(message)}</div>`;
 }
 
+function setAnalyticsRange(days) {
+  const fromEl = $("#analyticsFromDate");
+  const toEl = $("#analyticsToDate");
+  if (!fromEl || !toEl) return;
+  const today = new Date();
+  toEl.value = formatIsoDate(today);
+  fromEl.value = days === "today" ? toEl.value : formatIsoDate(addDays(today, -(Number(days) - 1)));
+  void loadVisitAnalytics();
+}
+
+function renderDailyChart(rows) {
+  const chart = $("#analyticsDailyChart");
+  if (!chart) return;
+  const ordered = [...(rows || [])].reverse();
+  const max = Math.max(1, ...ordered.map((row) => Number(row.visits || 0)));
+  chart.innerHTML = ordered.length
+    ? ordered
+        .map((row) => {
+          const visits = Number(row.visits || 0);
+          const height = Math.max(8, Math.round((visits / max) * 100));
+          return `
+        <div class="analytics-day-bar" title="${esc(formatDisplayDate(row.date))}: ${formatVisits(visits)} click">
+          <div class="analytics-day-value">${formatVisits(visits)}</div>
+          <div class="analytics-day-track">
+            <span style="height:${height}%"></span>
+          </div>
+          <div class="analytics-day-label">${esc(formatDisplayDate(row.date).slice(0, 5))}</div>
+        </div>`;
+        })
+        .join("")
+    : analyticsEmptyRow("Chưa có dữ liệu theo ngày.");
+}
+
+function renderSiteChart(rows) {
+  const chart = $("#analyticsSiteChart");
+  if (!chart) return;
+  const ranked = [...(rows || [])]
+    .filter((row) => Number(row.visits || 0) > 0)
+    .sort((a, b) => Number(b.visits || 0) - Number(a.visits || 0))
+    .slice(0, 8);
+  const max = Math.max(1, ...ranked.map((row) => Number(row.visits || 0)));
+  chart.innerHTML = ranked.length
+    ? ranked
+        .map((row, index) => {
+          const visits = Number(row.visits || 0);
+          const width = Math.max(4, Math.round((visits / max) * 100));
+          const title = row.name || row.product_title || row.page_title || `Trang #${row.site_id}`;
+          return `
+        <div class="analytics-site-bar">
+          <div class="analytics-site-rank">${index + 1}</div>
+          <div class="analytics-site-bar-main">
+            <div class="analytics-site-bar-label">
+              <strong>${esc(row.domain)}</strong>
+              <small>${esc(title)}</small>
+            </div>
+            <div class="analytics-site-track"><span style="width:${width}%"></span></div>
+          </div>
+          <strong>${formatVisits(visits)}</strong>
+        </div>`;
+        })
+        .join("")
+    : analyticsEmptyRow("Chưa có trang nào có click trong khoảng ngày này.");
+}
+
 function renderAnalyticsRows(data) {
   const dateRows = $("#analyticsDateRows");
   const siteRows = $("#analyticsSiteRows");
+  const days = getDateSpanDays(data.from, data.to);
+  const dailyRows = data.by_date || [];
+  const siteRowsData = data.by_site || [];
+  const activeSites = siteRowsData.filter((row) => Number(row.visits || 0) > 0);
+  const bestDay = dailyRows.reduce(
+    (best, row) => (Number(row.visits || 0) > Number(best.visits || 0) ? row : best),
+    { date: "", visits: 0 },
+  );
+  const topSite = activeSites[0];
+
   if ($("#analyticsVisitTotal")) $("#analyticsVisitTotal").textContent = formatVisits(data.total);
+  if ($("#analyticsDailyAverage")) $("#analyticsDailyAverage").textContent = formatVisits(Math.round(Number(data.total || 0) / days));
+  if ($("#analyticsBestDayVisits")) $("#analyticsBestDayVisits").textContent = formatVisits(bestDay.visits);
+  if ($("#analyticsBestDayLabel")) $("#analyticsBestDayLabel").textContent = bestDay.date ? formatDisplayDate(bestDay.date) : "-";
+  if ($("#analyticsActiveSiteCount")) $("#analyticsActiveSiteCount").textContent = formatVisits(activeSites.length);
+  if ($("#analyticsTopSiteLabel")) $("#analyticsTopSiteLabel").textContent = topSite ? topSite.domain : "-";
+  if ($("#analyticsRangeLabel")) $("#analyticsRangeLabel").textContent = `${formatDisplayDate(data.from)} - ${formatDisplayDate(data.to)}`;
+  if ($("#analyticsDateCount")) $("#analyticsDateCount").textContent = `${formatVisits(dailyRows.length)} ngày`;
+  if ($("#analyticsSiteCount")) $("#analyticsSiteCount").textContent = `${formatVisits(activeSites.length)} trang`;
+
+  renderDailyChart(dailyRows);
+  renderSiteChart(siteRowsData);
 
   if (dateRows) {
-    dateRows.innerHTML = data.by_date?.length
-      ? data.by_date
+    dateRows.innerHTML = dailyRows.length
+      ? dailyRows
           .map(
             (row) => `
         <div class="analytics-row">
@@ -464,9 +566,8 @@ function renderAnalyticsRows(data) {
   }
 
   if (siteRows) {
-    const rows = (data.by_site || []).filter((row) => Number(row.visits || 0) > 0);
-    siteRows.innerHTML = rows.length
-      ? rows
+    siteRows.innerHTML = activeSites.length
+      ? activeSites
           .map((row) => {
             const title = row.name || row.product_title || row.page_title || `Trang #${row.site_id}`;
             return `
@@ -1341,7 +1442,6 @@ async function loadSitesOptimized() {
   subdomainListCache = subdomains;
   updateSiteOverview(sites);
   renderSiteCards();
-  await loadVisitAnalytics();
 }
 
 async function saveInlineDomain(siteId, row, btn) {
@@ -1634,11 +1734,10 @@ $("#analyticsToDate")?.addEventListener("change", () => {
   }
   void loadVisitAnalytics();
 });
-$("#analyticsTodayBtn")?.addEventListener("click", () => {
-  const today = formatIsoDate(new Date());
-  if ($("#analyticsFromDate")) $("#analyticsFromDate").value = today;
-  if ($("#analyticsToDate")) $("#analyticsToDate").value = today;
-  void loadVisitAnalytics();
+$$("[data-analytics-range]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    setAnalyticsRange(btn.dataset.analyticsRange);
+  });
 });
 
 $("#domain")?.addEventListener("input", updateDomainUrlPreview);

@@ -70,6 +70,10 @@
             <i data-lucide="layers"></i>
             <span>Danh sách trang</span>
           </button>
+          <button class="nav-btn" data-view="dashboard">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Dashboard</span>
+          </button>
           <button class="nav-btn" data-view="domains">
             <i data-lucide="globe"></i>
             <span>Quản lý domain</span>
@@ -135,40 +139,6 @@
             </div>
           </div>
 
-          <div class="panel analytics-panel">
-            <div class="analytics-header">
-              <div>
-                <h2>Dashboard click theo ngày</h2>
-                <p>Thống kê lượt truy cập landing page theo từng ngày hoặc khoảng ngày.</p>
-              </div>
-              <div class="analytics-filters">
-                <label>
-                  Từ ngày
-                  <input type="date" id="analyticsFromDate" />
-                </label>
-                <label>
-                  Đến ngày
-                  <input type="date" id="analyticsToDate" />
-                </label>
-                <button type="button" class="btn btn-ghost btn-sm" id="analyticsTodayBtn">Hôm nay</button>
-              </div>
-            </div>
-            <div class="analytics-summary">
-              <span>Tổng click trong khoảng đã chọn</span>
-              <strong id="analyticsVisitTotal">0</strong>
-            </div>
-            <div class="analytics-grid">
-              <div>
-                <h3>Theo ngay</h3>
-                <div id="analyticsDateRows" class="analytics-row-list"></div>
-              </div>
-              <div>
-                <h3>Theo trang web</h3>
-                <div id="analyticsSiteRows" class="analytics-row-list"></div>
-              </div>
-            </div>
-          </div>
-
           <div class="panel site-list-panel">
             <div class="site-list-toolbar">
               <div class="site-search-wrap">
@@ -182,6 +152,99 @@
               </select>
             </div>
             <div id="sitesTableBody" class="site-card-list"></div>
+          </div>
+        </div>
+
+        <!-- Analytics Dashboard View -->
+        <div id="dashboardView" class="hidden">
+          <div class="topbar">
+            <div class="topbar-title">
+              <h1>Dashboard click</h1>
+              <p class="topbar-subtitle">Thống kê lượt truy cập landing page theo từng ngày hoặc khoảng ngày</p>
+            </div>
+          </div>
+
+          <div class="analytics-layout">
+            <div class="panel analytics-control-panel">
+              <div class="analytics-header">
+                <div>
+                  <h2>So sánh hiệu quả click</h2>
+                  <p>Chọn nhanh khoảng thời gian hoặc tự nhập ngày để xem biến động click.</p>
+                </div>
+                <div class="analytics-filters">
+                  <label>
+                    Từ ngày
+                    <input type="date" id="analyticsFromDate" />
+                  </label>
+                  <label>
+                    Đến ngày
+                    <input type="date" id="analyticsToDate" />
+                  </label>
+                  <div class="analytics-quick-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" data-analytics-range="today">Hôm nay</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-analytics-range="7">7 ngày</button>
+                    <button type="button" class="btn btn-ghost btn-sm" data-analytics-range="30">30 ngày</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="analytics-metric-grid">
+              <div class="analytics-metric-card">
+                <span>Tổng click</span>
+                <strong id="analyticsVisitTotal">0</strong>
+                <small id="analyticsRangeLabel">-</small>
+              </div>
+              <div class="analytics-metric-card">
+                <span>Trung bình/ngày</span>
+                <strong id="analyticsDailyAverage">0</strong>
+                <small>Dựa trên khoảng đã chọn</small>
+              </div>
+              <div class="analytics-metric-card">
+                <span>Ngày cao nhất</span>
+                <strong id="analyticsBestDayVisits">0</strong>
+                <small id="analyticsBestDayLabel">-</small>
+              </div>
+              <div class="analytics-metric-card">
+                <span>Trang có click</span>
+                <strong id="analyticsActiveSiteCount">0</strong>
+                <small id="analyticsTopSiteLabel">-</small>
+              </div>
+            </div>
+
+            <div class="analytics-chart-grid">
+              <div class="panel analytics-chart-card">
+                <div class="analytics-section-title">
+                  <h3>Biểu đồ click theo ngày</h3>
+                  <span>So sánh từng ngày</span>
+                </div>
+                <div id="analyticsDailyChart" class="analytics-daily-chart"></div>
+              </div>
+              <div class="panel analytics-chart-card">
+                <div class="analytics-section-title">
+                  <h3>Top trang web</h3>
+                  <span>So sánh theo landing page</span>
+                </div>
+                <div id="analyticsSiteChart" class="analytics-site-chart"></div>
+              </div>
+            </div>
+
+            <div class="analytics-detail-grid">
+              <div class="panel analytics-detail-card">
+                <div class="analytics-section-title">
+                  <h3>Chi tiết theo ngày</h3>
+                  <span id="analyticsDateCount">0 ngày</span>
+                </div>
+                <div id="analyticsDateRows" class="analytics-row-list"></div>
+              </div>
+              <div class="panel analytics-detail-card">
+                <div class="analytics-section-title">
+                  <h3>Chi tiết theo trang</h3>
+                  <span id="analyticsSiteCount">0 trang</span>
+                </div>
+                <div id="analyticsSiteRows" class="analytics-row-list"></div>
+              </div>
+            </div>
           </div>
         </div>
 

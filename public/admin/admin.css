@@ -1079,29 +1079,33 @@ input[type="color"]::-webkit-color-swatch {
   font-variant-numeric: tabular-nums;
 }
 
-.analytics-panel {
+.analytics-layout {
   display: grid;
   gap: 16px;
+}
+
+.analytics-control-panel,
+.analytics-chart-card,
+.analytics-detail-card {
   padding: 18px;
-  margin-bottom: 18px;
 }
 
 .analytics-header {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
   align-items: flex-start;
 }
 
 .analytics-header h2 {
   margin: 0;
   color: var(--text);
-  font-size: 18px;
-  line-height: 1.25;
+  font-size: 20px;
+  line-height: 1.2;
 }
 
 .analytics-header p {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
@@ -1110,6 +1114,7 @@ input[type="color"]::-webkit-color-swatch {
 .analytics-filters {
   display: flex;
   align-items: end;
+  justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -1131,45 +1136,209 @@ input[type="color"]::-webkit-color-swatch {
   font-size: 13px;
 }
 
-.analytics-summary {
+.analytics-quick-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.analytics-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.analytics-metric-card {
+  display: grid;
+  gap: 6px;
+  min-height: 116px;
+  padding: 16px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface2);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
-.analytics-summary span {
+.analytics-metric-card span {
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
 }
 
-.analytics-summary strong {
-  color: var(--brand);
-  font-size: 26px;
+.analytics-metric-card strong {
+  color: var(--text);
+  font-size: 30px;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.analytics-grid {
+.analytics-metric-card small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-chart-grid,
+.analytics-detail-grid {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: 16px;
 }
 
-.analytics-grid h3 {
-  margin: 0 0 8px;
+.analytics-section-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 14px;
+}
+
+.analytics-section-title h3 {
+  margin: 0;
   color: var(--text);
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.analytics-section-title span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.analytics-daily-chart {
+  display: grid;
+  grid-auto-columns: minmax(40px, 1fr);
+  grid-auto-flow: column;
+  gap: 10px;
+  min-height: 260px;
+  overflow-x: auto;
+  padding: 8px 2px 2px;
+}
+
+.analytics-day-bar {
+  display: grid;
+  grid-template-rows: 24px 1fr 20px;
+  gap: 8px;
+  min-width: 42px;
+  align-items: end;
+}
+
+.analytics-day-value {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.analytics-day-track {
+  display: flex;
+  align-items: flex-end;
+  min-height: 180px;
+  border-radius: 8px;
+  background: rgba(var(--brand-rgb), 0.08);
+  overflow: hidden;
+}
+
+.analytics-day-track span {
+  display: block;
+  width: 100%;
+  min-height: 8px;
+  border-radius: 8px 8px 0 0;
+  background: linear-gradient(180deg, var(--brand), var(--brand-hover));
+}
+
+.analytics-day-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.analytics-site-chart {
+  display: grid;
+  gap: 12px;
+}
+
+.analytics-site-bar {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.analytics-site-rank {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(var(--brand-rgb), 0.22);
+  border-radius: 50%;
+  background: rgba(var(--brand-rgb), 0.1);
+}
+
+.analytics-site-bar-main {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.analytics-site-bar-label {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.analytics-site-bar-label strong,
+.analytics-site-bar-label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analytics-site-bar-label strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.analytics-site-bar-label small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.analytics-site-track {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(var(--brand-rgb), 0.08);
+  overflow: hidden;
+}
+
+.analytics-site-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--green));
+}
+
+.analytics-site-bar > strong {
+  color: var(--text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .analytics-row-list {
   display: grid;
   gap: 8px;
+  max-height: 360px;
+  overflow: auto;
 }
 
 .analytics-row {
@@ -2191,6 +2360,15 @@ select:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .analytics-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .analytics-chart-grid,
+  .analytics-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
   .site-card {
     grid-template-columns: 1fr;
   }
@@ -2315,17 +2493,19 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
-  .analytics-header,
-  .analytics-summary {
+  .analytics-header {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .analytics-grid {
+  .analytics-metric-grid,
+  .analytics-chart-grid,
+  .analytics-detail-grid {
     grid-template-columns: 1fr;
   }
 
   .analytics-filters {
+    justify-content: flex-start;
     align-items: stretch;
   }
 
@@ -2335,6 +2515,10 @@ select:focus {
 
   .analytics-filters input {
     width: 100%;
+  }
+
+  .analytics-daily-chart {
+    grid-auto-columns: minmax(44px, 1fr);
   }
 
   .panel {
