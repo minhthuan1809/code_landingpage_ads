@@ -1248,7 +1248,7 @@ function syncInlineDomainRow(row) {
 
 function updateSiteOverview(sites) {
   const activeCount = sites.filter((site) => site.active).length;
-  const visitTotal = sites.reduce((sum, site) => sum + Number(site.visit_count || 0), 0);
+  const visitTotal = sites.reduce((sum, site) => sum + Number(site.today_visit_count || 0), 0);
   $("#siteTotalCount").textContent = formatVisits(sites.length);
   $("#siteActiveCount").textContent = formatVisits(activeCount);
   $("#siteInactiveCount").textContent = formatVisits(sites.length - activeCount);
@@ -1395,8 +1395,8 @@ function renderSiteCards() {
           </button>
           <div class="site-visit-pill">
             <i data-lucide="mouse-pointer-click"></i>
-            <strong>${formatVisits(s.visit_count)}</strong>
-            <span>lượt truy cập</span>
+            <strong>${formatVisits(s.today_visit_count)}</strong>
+            <span>lượt hôm nay</span>
           </div>
         </div>
 
@@ -1493,7 +1493,7 @@ async function loadSites() {
           <code class="url-code url-copy" data-copy-url="${esc(s.preview_url)}" title="Bấm để copy">${esc(s.preview_url)}</code>
         </td>
         <td class="site-name-cell">${esc(s.name || s.product_title?.slice(0, 30) || "—")}</td>
-        <td class="site-visits-cell"><strong>${formatVisits(s.visit_count)}</strong></td>
+        <td class="site-visits-cell"><strong>${formatVisits(s.today_visit_count)}</strong></td>
         <td class="site-status-cell">
           <span class="badge ${s.active ? "badge-on" : "badge-off"}">${s.active ? "Hoạt động" : "Tắt"}</span>
         </td>

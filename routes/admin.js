@@ -6,6 +6,7 @@ const {
   getAllSites,
   getSiteById,
   getVisitAnalytics,
+  getSiteVisitCountsByDate,
   getAllParentDomains,
   getParentDomainById,
   createParentDomain,
@@ -359,8 +360,10 @@ router.post("/preview", requireAuth, (req, res) => {
 
 router.get("/sites", requireAuth, (_req, res) => {
   const config = getServerConfig();
+  const todayVisits = getSiteVisitCountsByDate();
   const sites = getAllSites().map((site) => ({
     ...site,
+    today_visit_count: todayVisits.get(Number(site.id)) || 0,
     ...buildSiteUrls(site.domain, config),
   }));
   res.json(sites);
