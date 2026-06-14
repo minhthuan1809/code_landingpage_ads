@@ -135,6 +135,40 @@
             </div>
           </div>
 
+          <div class="panel analytics-panel">
+            <div class="analytics-header">
+              <div>
+                <h2>Dashboard click theo ngày</h2>
+                <p>Thống kê lượt truy cập landing page theo từng ngày hoặc khoảng ngày.</p>
+              </div>
+              <div class="analytics-filters">
+                <label>
+                  Từ ngày
+                  <input type="date" id="analyticsFromDate" />
+                </label>
+                <label>
+                  Đến ngày
+                  <input type="date" id="analyticsToDate" />
+                </label>
+                <button type="button" class="btn btn-ghost btn-sm" id="analyticsTodayBtn">Hôm nay</button>
+              </div>
+            </div>
+            <div class="analytics-summary">
+              <span>Tổng click trong khoảng đã chọn</span>
+              <strong id="analyticsVisitTotal">0</strong>
+            </div>
+            <div class="analytics-grid">
+              <div>
+                <h3>Theo ngay</h3>
+                <div id="analyticsDateRows" class="analytics-row-list"></div>
+              </div>
+              <div>
+                <h3>Theo trang web</h3>
+                <div id="analyticsSiteRows" class="analytics-row-list"></div>
+              </div>
+            </div>
+          </div>
+
           <div class="panel site-list-panel">
             <div class="site-list-toolbar">
               <div class="site-search-wrap">

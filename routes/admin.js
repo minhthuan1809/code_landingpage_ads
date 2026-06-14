@@ -5,6 +5,7 @@ const fs = require("fs");
 const {
   getAllSites,
   getSiteById,
+  getVisitAnalytics,
   getAllParentDomains,
   getParentDomainById,
   createParentDomain,
@@ -363,6 +364,13 @@ router.get("/sites", requireAuth, (_req, res) => {
     ...buildSiteUrls(site.domain, config),
   }));
   res.json(sites);
+});
+
+router.get("/analytics/visits", requireAuth, (req, res) => {
+  res.json(getVisitAnalytics({
+    from: req.query.from,
+    to: req.query.to,
+  }));
 });
 
 router.get("/sites/:id", requireAuth, (req, res) => {

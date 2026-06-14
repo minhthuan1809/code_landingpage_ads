@@ -13,6 +13,7 @@ let refreshPromise = null;
 let previewTimer = null;
 let previewRequestId = 0;
 let domainsRefreshToken = 0;
+let analyticsRequestId = 0;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
@@ -410,6 +411,95 @@ function renderOtherProducts() {
 
 function formatVisits(n) {
   return Number(n || 0).toLocaleString("vi-VN");
+}
+
+function formatIsoDate(date) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatDisplayDate(value) {
+  if (!value) return "";
+  const [yyyy, mm, dd] = String(value).split("-");
+  if (!yyyy || !mm || !dd) return value;
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function ensureAnalyticsDates() {
+  const fromEl = $("#analyticsFromDate");
+  const toEl = $("#analyticsToDate");
+  if (!fromEl || !toEl) return null;
+  const today = formatIsoDate(new Date());
+  if (!fromEl.value) fromEl.value = today;
+  if (!toEl.value) toEl.value = fromEl.value;
+  if (fromEl.value > toEl.value) toEl.value = fromEl.value;
+  return { from: fromEl.value, to: toEl.value };
+}
+
+function analyticsEmptyRow(message) {
+  return `<div class="analytics-empty">${esc(message)}</div>`;
+}
+
+function renderAnalyticsRows(data) {
+  const dateRows = $("#analyticsDateRows");
+  const siteRows = $("#analyticsSiteRows");
+  if ($("#analyticsVisitTotal")) $("#analyticsVisitTotal").textContent = formatVisits(data.total);
+
+  if (dateRows) {
+    dateRows.innerHTML = data.by_date?.length
+      ? data.by_date
+          .map(
+            (row) => `
+        <div class="analytics-row">
+          <span>${esc(formatDisplayDate(row.date))}</span>
+          <strong>${formatVisits(row.visits)}</strong>
+        </div>`,
+          )
+          .join("")
+      : analyticsEmptyRow("Chưa có click trong khoảng ngày này.");
+  }
+
+  if (siteRows) {
+    const rows = (data.by_site || []).filter((row) => Number(row.visits || 0) > 0);
+    siteRows.innerHTML = rows.length
+      ? rows
+          .map((row) => {
+            const title = row.name || row.product_title || row.page_title || `Trang #${row.site_id}`;
+            return `
+        <div class="analytics-row analytics-site-row">
+          <span>
+            <strong>${esc(row.domain)}</strong>
+            <small>${esc(title)}</small>
+          </span>
+          <strong>${formatVisits(row.visits)}</strong>
+        </div>`;
+          })
+          .join("")
+      : analyticsEmptyRow("Chưa có trang nào có click trong khoảng ngày này.");
+  }
+}
+
+async function loadVisitAnalytics() {
+  const range = ensureAnalyticsDates();
+  if (!range) return;
+  const requestId = ++analyticsRequestId;
+  const dateRows = $("#analyticsDateRows");
+  const siteRows = $("#analyticsSiteRows");
+  if (dateRows) dateRows.innerHTML = sectionLoaderHtml("Đang tải thống kê...");
+  if (siteRows) siteRows.innerHTML = sectionLoaderHtml("Đang tải thống kê...");
+  try {
+    const data = await api(`/analytics/visits?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`);
+    if (requestId !== analyticsRequestId) return;
+    renderAnalyticsRows(data);
+  } catch (err) {
+    if (requestId !== analyticsRequestId) return;
+    if (dateRows) dateRows.innerHTML = analyticsEmptyRow(err.message || "Không tải được thống kê.");
+    if (siteRows) siteRows.innerHTML = "";
+  }
 }
 
 function esc(s) {
@@ -1251,6 +1341,7 @@ async function loadSitesOptimized() {
   subdomainListCache = subdomains;
   updateSiteOverview(sites);
   renderSiteCards();
+  await loadVisitAnalytics();
 }
 
 async function saveInlineDomain(siteId, row, btn) {
@@ -1527,6 +1618,28 @@ $("#exportSitesBtn")?.addEventListener("click", async () => {
 
 $("#siteSearchInput")?.addEventListener("input", renderSiteCards);
 $("#siteStatusFilter")?.addEventListener("change", renderSiteCards);
+$("#analyticsFromDate")?.addEventListener("change", () => {
+  const fromEl = $("#analyticsFromDate");
+  const toEl = $("#analyticsToDate");
+  if (fromEl && toEl && (!toEl.value || toEl.value < fromEl.value)) {
+    toEl.value = fromEl.value;
+  }
+  void loadVisitAnalytics();
+});
+$("#analyticsToDate")?.addEventListener("change", () => {
+  const fromEl = $("#analyticsFromDate");
+  const toEl = $("#analyticsToDate");
+  if (fromEl && toEl && toEl.value < fromEl.value) {
+    fromEl.value = toEl.value;
+  }
+  void loadVisitAnalytics();
+});
+$("#analyticsTodayBtn")?.addEventListener("click", () => {
+  const today = formatIsoDate(new Date());
+  if ($("#analyticsFromDate")) $("#analyticsFromDate").value = today;
+  if ($("#analyticsToDate")) $("#analyticsToDate").value = today;
+  void loadVisitAnalytics();
+});
 
 $("#domain")?.addEventListener("input", updateDomainUrlPreview);
 
@@ -1596,6 +1709,7 @@ $("#parentDomainForm")?.addEventListener("submit", async (e) => {
       selectParentId: createdParentId,
       highlightParentId: createdParentId || (editId ? Number(editId) : null),
     });
+    await loadSites();
   } catch (err) {
     alert(err.message);
   }
@@ -1630,6 +1744,7 @@ $("#subdomainForm")?.addEventListener("submit", async (e) => {
         toast(`Đã tạo subdomain + ${formatDnsToast(result.dns)}`);
       }
       await loadDomains();
+      await loadSites();
     }, "Đang tạo...");
   } catch (err) {
     alert(err.message);
