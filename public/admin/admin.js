@@ -445,7 +445,7 @@ function ensureAnalyticsDates() {
   if (!fromEl || !toEl) return null;
   const today = formatIsoDate(new Date());
   if (!fromEl.value) fromEl.value = formatIsoDate(addDays(new Date(), -6));
-  if (!toEl.value) toEl.value = fromEl.value;
+  if (!toEl.value) toEl.value = today;
   if (fromEl.value > toEl.value) toEl.value = fromEl.value;
   return { from: fromEl.value, to: toEl.value };
 }

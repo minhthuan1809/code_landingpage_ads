@@ -119,6 +119,31 @@
       </a>
     </div>
 
+    <script>
+      (function trackBuyButtonClick() {
+        const buyBtn = document.querySelector(".buy-btn");
+        if (!buyBtn) return;
+
+        buyBtn.addEventListener("click", () => {
+          const endpoint = "/track-buy-click";
+          const payload = JSON.stringify({ source: "buy-btn" });
+          const blob = new Blob([payload], { type: "application/json" });
+
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon(endpoint, blob);
+            return;
+          }
+
+          fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true,
+          }).catch(() => {});
+        });
+      })();
+    </script>
+
     <% if (site.product_images.length > 0) { %>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>

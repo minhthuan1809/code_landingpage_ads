@@ -4,6 +4,7 @@ const {
   getInactiveSiteByDomain,
   normalizeDomain,
   recordVisit,
+  recordBuyClick,
 } = require("../lib/db");
 const { isLocalAccessHost } = require("../lib/urls");
 
@@ -67,6 +68,17 @@ router.get("/", (req, res) => {
 
   recordVisit(site.site_id, getClientIp(req));
   res.render("landing", { site });
+});
+
+router.post("/track-buy-click", (req, res) => {
+  const domain = resolveRequestDomain(req);
+  const site = getSiteByDomain(domain);
+  if (!site) {
+    return res.status(404).json({ error: "Không tìm thấy trang" });
+  }
+
+  const result = recordBuyClick(site.site_id, getClientIp(req));
+  return res.json({ ok: true, ...result });
 });
 
 module.exports = router;
